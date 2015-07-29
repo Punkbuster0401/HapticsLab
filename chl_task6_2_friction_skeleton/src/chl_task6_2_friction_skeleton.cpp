@@ -32,6 +32,9 @@ last revision: 07.06.2010*/
 #include <string.h>
 #include <algorithm>
 #include <time.h>
+#include "bass.h"
+#include "chai3d.h" 
+
 //---------------------------------------------------------------------------
 #include "ch_generic3dofPointer.h"
 //---------------------------------------------------------------------------
@@ -127,6 +130,29 @@ string resourceRoot;
 
 // has exited haptics simulation thread
 bool simulationFinished = false;
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+//								AUDIO								   //
+/////////////////////////////////////////////////////////////////////////////////////
+// size of sound data
+const int NBR_TEXTURES = 1;
+const int NBR_VELOCITIES = 5;
+
+
+
+
+
+// Global variables for the audio stream
+
+
+// Write the requested data from the loaded buffer to the sound card
+//DWORD CALLBACK MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
+void StartPlayback(cMesh* Obj);
+
+
+
+
 
 //---------------------------------------------------------------------------
 // DECLARED MACROS
@@ -356,6 +382,64 @@ int main(int argc, char* argv[])
 	double stiffnessMax = info.m_maxForceStiffness / workspaceScaleFactor;
 
 
+	// Initialize sound device and create audio stream
+    BASS_Init(1,44100,0,0,NULL);
+
+	//Load Sound Files
+	//// Load the data from the specified file
+ //   HSTREAM file_stream = 1;
+ //   file_stream = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
+
+	//HSTREAM file_stream_mat[NBR_TEXTURES][NBR_VELOCITIES] = {1,1,1,1,1};
+	//file_stream_mat[0][0] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
+	//file_stream_mat[0][1] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/lion.wav"),0,0,BASS_STREAM_DECODE);
+	//file_stream_mat[0][2] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/bird.wav"),0,0,BASS_STREAM_DECODE);
+	//file_stream_mat[0][3] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/cow.wav"),0,0,BASS_STREAM_DECODE);
+	//file_stream_mat[0][4] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/duck.wav"),0,0,BASS_STREAM_DECODE);
+
+	//if (file_stream_mat[0][0] == 0)
+	//{
+	//	#if defined(_msvc)
+	//	file_stream_mat[0][0] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/horse.wav"),0,0,bass_stream_decode);
+	//	file_stream_mat[0][1] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/lion.wav"),0,0,bass_stream_decode);
+	//	file_stream_mat[0][2] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/bird.wav"),0,0,bass_stream_decode);
+	//	file_stream_mat[0][3] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/cow.wav"),0,0,bass_stream_decode);
+	//	file_stream_mat[0][4] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/duck.wav"),0,0,bass_stream_decode);
+	//	//file_stream = bass_streamcreatefile(false,"../../../bin/resources/sounds/classic.mp3",0,0,bass_stream_decode);
+	//	#endif
+	//}
+	//if (!fileload)
+	//{
+ //       printf("error - mp3 audio file failed to load correctly.\n");
+ //       close();
+ //       return (-1);
+ //   }
+
+
+	/////////////////////////////////////////////////////////////////////////////////////
+	//								bla bla bla										   //
+	/////////////////////////////////////////////////////////////////////////////////////
+	//for( int text = 0; text < NBR_TEXTURES; text = text + 1 ){	
+	//	for( int veloc = 0; veloc < NBR_VELOCITIES; veloc = veloc + 1 ){
+	//		stream_length_mat[text][veloc] = BASS_ChannelGetLength(file_stream_mat[text][veloc], 0);
+	//		BASS_ChannelGetInfo(file_stream_mat[text][veloc], &infoBass_mat[text][veloc]);
+	//		data_mat[text][veloc] = new char[(unsigned int)stream_length_mat[text][veloc]];
+	//		BASS_ChannelGetData(file_stream_mat[text][veloc], data_mat[text][veloc], (unsigned int)stream_length_mat[text][veloc]);
+	//		
+	//		/*data = data_mat[text][veloc];
+	//		stream_length = stream_length_mat[text][veloc];*/
+
+	//		stream_mat[text][veloc] = BASS_StreamCreate(infoBass_mat[text][veloc].freq, infoBass_mat[text][veloc].chans, 0, &MyStreamWriter, 0);
+	//		std::cout << "stream: " << stream_mat[text][veloc] << std::endl;
+	//		std::cout << "data_mat:  " << sizeof(*data_mat[text][veloc]) <<"|| stream_length:  " << stream_length_mat[text][veloc] << std::endl;
+	//	}
+	//}
+
+
+
+
+
+
 	//-----------------------------------------------------------------------
 	// COMPOSE THE VIRTUAL SCENE
 	//-----------------------------------------------------------------------
@@ -427,6 +511,15 @@ int main(int argc, char* argv[])
 		DObject->scale(0.003);
 		DObject->setUseTexture(true);
 
+		//// compute a boundary box
+		DObject->computeBoundaryBox(true);
+		// compute collision detection algorithm
+		DObject->createAABBCollisionDetector(1.01 * proxyRadius, true, false);
+		DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
+		DObject->InitStream();
+		
+		
+
 		break;
 		case 1:
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/bunny/bunny.obj"));
@@ -439,6 +532,8 @@ int main(int argc, char* argv[])
 		DObject->setMaterial(tooth_mat, true);
 		DObject->scale(0.8);
 		DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
+		//DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
+
 		break;
 		case 2:			
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock1.obj"));
@@ -459,6 +554,8 @@ int main(int argc, char* argv[])
 			DObject->setMaterial(rock_mat, true);
 			DObject->scale(0.3);
 			DObject->setUseTexture(true);
+			DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
+			//DObject->InitStream();
 			break;
 
 
@@ -498,7 +595,8 @@ int main(int argc, char* argv[])
 			//DObject->setMaterial(sponge_mat, true);
 			DObject->scale(0.1);
 		DObject->setUseTexture(true);
-
+		//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
+		
 		break;
 
 		case 4:			
@@ -520,6 +618,7 @@ int main(int argc, char* argv[])
 			DObject->setMaterial(rock_mat, true);
 			DObject->scale(0.3);
 			DObject->setUseTexture(true);
+			DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
 			break;
 		}
 
@@ -530,18 +629,18 @@ int main(int argc, char* argv[])
 		//((cMesh*)(DObject->getChild(1)))->setUseTransparency(false);
 		//((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
 
-		//// compute a boundary box
-		DObject->computeBoundaryBox(true);
+		
 
 		// resize DObject to screen
 		
 
-		// compute collision detection algorithm
-		DObject->createAABBCollisionDetector(1.01 * proxyRadius, true, false);
+		
 
 		DObject->setShowEnabled(false, true);
 
 		Objects.push_back(DObject);	
+
+		//TODO Ghost objects
 
 	}
 
@@ -866,6 +965,23 @@ void updateHaptics(void)
 			((ch_generic3dofPointer*)tool)->computeInteractionForcesD();
 		else
 			tool->computeInteractionForces();
+
+
+
+		//Sound
+		// check if the tool is touching an object
+		cMesh* ContObject = (cMesh*)tool->m_proxyPointForceModel->m_contactPoint0->m_object;
+		
+		if(ContObject!=NULL){
+			
+		if (tool->isInContact(ContObject)){		 
+		StartPlayback(ContObject);
+		 }
+		}
+
+
+
+
 		button = tool->getUserSwitch(0);
 		if(button==0)	newButPush=true;
 		//std::cout<<"Dist"<<tool->getDeviceGlobalPos()<<std::endl ;
@@ -883,6 +999,7 @@ void updateHaptics(void)
 			checkSolution();
 		break;
 		}
+	
 
 
 		// send forces to device
@@ -1041,3 +1158,11 @@ void checkSolution(void){
 	/*close();
 	exit(0);*/
 	}
+void StartPlayback(cMesh* Obj){	
+
+	//BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_FREQ, 500);
+	
+	cout<< Obj->stream[0];
+	BASS_ChannelPlay(Obj->stream[0],FALSE);
+}
+
