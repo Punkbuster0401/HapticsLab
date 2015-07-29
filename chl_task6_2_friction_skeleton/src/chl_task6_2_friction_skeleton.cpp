@@ -89,7 +89,11 @@ vector<cMesh*> Objects;
 //cMesh* DObject;
 
 int aktObj=0;
-int NumObj=4;
+
+//Set number of Objects
+int NumObj=5;
+
+
 int multChoice[3];
 static int button;
 int realModel;
@@ -496,6 +500,27 @@ int main(int argc, char* argv[])
 		DObject->setUseTexture(true);
 
 		break;
+
+		case 4:			
+			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock_rough.obj"));
+			if (!fileload)
+			{
+#if defined(_MSVC)
+				fileload = DObject->loadFromFile("../../../bin/resources/models/Stone/Rock_rough.obj");
+#endif
+			}
+			if (!fileload)
+			{
+				printf("Error - 3D Model failed to load correctly.\n");
+				close();
+				return (-1);
+			}
+
+			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
+			DObject->setMaterial(rock_mat, true);
+			DObject->scale(0.3);
+			DObject->setUseTexture(true);
+			break;
 		}
 
 		//// make the outside of the DObject rendered in wireframe
@@ -683,6 +708,15 @@ void keySelect(unsigned char key, int x, int y)
 			Objects[l]->setShowEnabled(false,true);
 		}
 		Objects[3]->setShowEnabled(true,true);
+	}
+
+	if(key == '4')
+	{
+	
+		for(int l=0;l<Objects.size();l++){
+			Objects[l]->setShowEnabled(false,true);
+		}
+		Objects[4]->setShowEnabled(true,true);
 	}
 
 	// option -:
