@@ -99,13 +99,7 @@ const int MAX_TIME = 50;
 const double chartClock = 50;
 const double MESH_SCALE_SIZE = 0.35;
 
-// Global variables for the audio stream
-HSTREAM stream;
-BASS_CHANNELINFO infoBass;
-QWORD stream_length;
-char *data;
-int record_direction = 1;
-unsigned int pos = 0;
+
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -120,6 +114,17 @@ BASS_CHANNELINFO infoBass_mat[NBR_TEXTURES][NBR_VELOCITIES];
 QWORD stream_length_mat[NBR_TEXTURES][NBR_VELOCITIES];
 char *data_mat[NBR_TEXTURES][NBR_VELOCITIES];
 int soundf = 0;
+// Global variables for the audio stream
+HSTREAM stream;
+BASS_CHANNELINFO infoBass;
+QWORD stream_length;
+char *data;
+int record_direction = 1;
+unsigned int pos = 0;
+// Write the requested data from the loaded buffer to the sound card
+DWORD CALLBACK MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
+
+
 
 
 
