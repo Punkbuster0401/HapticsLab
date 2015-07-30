@@ -34,6 +34,7 @@ last revision: 07.06.2010*/
 #include <time.h>
 #include "bass.h"
 #include "chai3d.h" 
+//#include <CMesh.h>
 
 //---------------------------------------------------------------------------
 #include "ch_generic3dofPointer.h"
@@ -94,7 +95,7 @@ vector<cMesh*> Objects;
 int aktObj=0;
 
 //Set number of Objects
-int NumObj=5;
+int NumObj=6;
 
 
 int multChoice[3];
@@ -138,13 +139,19 @@ bool simulationFinished = false;
 // size of sound data
 const int NBR_TEXTURES = 1;
 const int NBR_VELOCITIES = 5;
-
-
-
+DWORD MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
+void InitStream();
 
 
 // Global variables for the audio stream
-
+static const int numStreams=5;
+HSTREAM file_stream[numStreams];
+HSTREAM stream[numStreams];
+QWORD stream_length[numStreams];
+BASS_CHANNELINFO infoBass[numStreams];
+char *data[numStreams];
+int record_direction=1 ;
+unsigned int pos=0;
 
 // Write the requested data from the loaded buffer to the sound card
 //DWORD CALLBACK MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
@@ -218,9 +225,8 @@ The interaction forces are then computed and sent to the device.
 */
 //===========================================================================
 
-int main(int argc, char* argv[])
-{
-
+int main(int argc, char* argv[]){
+	
 	//-----------------------------------------------------------------------
 	// INITIALIZATION
 	//-----------------------------------------------------------------------
@@ -485,7 +491,7 @@ int main(int argc, char* argv[])
 		DObject->setPos(0.0, 0.0, 0.0);
 		//DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(-10));
 		//DObject->rotate(cVector3d(0.0, 1.0, 0.0), cDegToRad(10));
-
+		DObject->setTag(it);
 		fileload = false;
 		// load an object file
 		switch(it)
@@ -510,16 +516,9 @@ int main(int argc, char* argv[])
 		DObject->setMaterial(tooth_mat, true);
 		DObject->scale(0.003);
 		DObject->setUseTexture(true);
-
-		//// compute a boundary box
-		DObject->computeBoundaryBox(true);
-		// compute collision detection algorithm
-		DObject->createAABBCollisionDetector(1.01 * proxyRadius, true, false);
-		DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
-		DObject->InitStream();
-		
-		
-
+		//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
+		file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
+		DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
 		break;
 		case 1:
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/bunny/bunny.obj"));
@@ -533,7 +532,9 @@ int main(int argc, char* argv[])
 		DObject->scale(0.8);
 		DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
 		//DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
-
+		file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
+		DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);
+		
 		break;
 		case 2:			
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock1.obj"));
@@ -551,11 +552,15 @@ int main(int argc, char* argv[])
 			}
 
 			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
-			DObject->setMaterial(rock_mat, true);
+			//DObject->setMaterial(rock_mat, true);
+			DObject->getChild(0)->m_material.setDynamicFriction(0.3);
+			DObject->getChild(0)->m_material.setStaticFriction(0.4);
+			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
 			DObject->scale(0.3);
 			DObject->setUseTexture(true);
-			DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
+			//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
 			//DObject->InitStream();
+			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
 			break;
 
 
@@ -596,7 +601,7 @@ int main(int argc, char* argv[])
 			DObject->scale(0.1);
 		DObject->setUseTexture(true);
 		//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
-		
+		file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
 		break;
 
 		case 4:			
@@ -618,10 +623,38 @@ int main(int argc, char* argv[])
 			DObject->setMaterial(rock_mat, true);
 			DObject->scale(0.3);
 			DObject->setUseTexture(true);
-			DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
+			//DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
+			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
 			break;
-		}
+	
+		//Cork doesn't work
+//		case 5:			
+//			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Cork/cork.obj"));
+//				
+//			if (!fileload)
+//			{
+//#if defined(_MSVC)
+//				fileload = DObject->loadFromFile("../../../bin/resources/models/cork/cork.obj");
+//
+//#endif
+//			}
+//			if (!fileload)
+//			{
+//				printf("Error - 3D Model failed to load correctly.\n");
+//				close();
+//				return (-1);
+//			}
+//
+//			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
+//			DObject->setMaterial(rock_mat, true);
+//			DObject->scale(0.1);
+//			DObject->setUseTexture(true);
+//			//DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
+//			break;
 
+
+
+		}
 		//// make the outside of the DObject rendered in wireframe
 		//((cMesh*)(DObject->getChild(1)))->setWireMode(true);
 
@@ -638,6 +671,17 @@ int main(int argc, char* argv[])
 
 		DObject->setShowEnabled(false, true);
 
+		//// compute a boundary box
+		DObject->computeBoundaryBox(true);
+		// compute collision detection algorithm		
+		DObject->createAABBCollisionDetector(1.01 * proxyRadius, true, false);
+		
+		//DObject->InitStream();
+		//InitStream();
+		//DObject->finalStream[0]=stream[0];
+		//BASS_ChannelPlay(DObject->finalStream[0],FALSE);
+
+		
 		Objects.push_back(DObject);	
 
 		//TODO Ghost objects
@@ -734,6 +778,7 @@ int main(int argc, char* argv[])
 	return (0);
 }
 
+
 //---------------------------------------------------------------------------
 
 void resizeWindow(int w, int h)
@@ -817,6 +862,15 @@ void keySelect(unsigned char key, int x, int y)
 		}
 		Objects[4]->setShowEnabled(true,true);
 	}
+	
+	if(key == '5')
+	{
+	
+		for(int l=0;l<Objects.size();l++){
+			Objects[l]->setShowEnabled(false,true);
+		}
+		Objects[5]->setShowEnabled(true,true);
+	}
 
 	// option -:
 	if (key == '-')
@@ -877,6 +931,7 @@ void keySelect(unsigned char key, int x, int y)
 
 void menuSelect(int value)
 {
+	
 	switch (value)
 	{
 		// enable full screen display
@@ -957,7 +1012,8 @@ void updateHaptics(void)
 	// main haptic simulation loop
 	while(simulationRunning)
 	{
-
+		//BASS_ChannelSetAttribute(stream[0], BASS_ATTRIB_FREQ, (int)(infoBass[0].freq));
+		//BASS_ChannelPlay(stream[0],FALSE);
 		// update position and orientation of tool
 		tool->updatePose();			
 		// compute interaction forces
@@ -971,14 +1027,18 @@ void updateHaptics(void)
 		//Sound
 		// check if the tool is touching an object
 		cMesh* ContObject = (cMesh*)tool->m_proxyPointForceModel->m_contactPoint0->m_object;
-		
+		//cGenericObject* GObject = tool->m_proxyPointForceModel->m_contactPoint0->m_object; 
+		//TODO Change to for Loop if Hstream member keeps empty
 		if(ContObject!=NULL){
 			
 		if (tool->isInContact(ContObject)){		 
+			
 		StartPlayback(ContObject);
 		 }
 		}
-
+		else BASS_ChannelStop(stream[0]);
+		
+		
 
 
 
@@ -1159,10 +1219,97 @@ void checkSolution(void){
 	exit(0);*/
 	}
 void StartPlayback(cMesh* Obj){	
-
+	
+		
 	//BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_FREQ, 500);
 	
-	cout<< Obj->stream[0];
-	BASS_ChannelPlay(Obj->stream[0],FALSE);
+	//cout<< Obj->finalStream[0];
+	//BASS_ChannelPlay(Obj->finalStream[0],FALSE);
+	//cout << BASS_ChannelPlay(file_stream[0],FALSE);
+	//BASS_ChannelPlay(Obj->finalStream[0],FALSE);
+	cout <<BASS_ErrorGetCode();
 }
+//void InitStream(){
+//	//for(int i=0; i<=5;i++){
+//	//	this->stream_length[i]= BASS_ChannelGetLength(this->file_stream[i], 0);
+//	//	BASS_ChannelGetInfo(this->file_stream[i], &this->infoBass[i]);
+//	//	this->data[i] = new char[(unsigned int)this->stream_length[i]];
+//	//	BASS_ChannelGetData(this->file_stream[i], this->data[i], (unsigned int)this->stream_length[i]);		
+//	//	//stream[i] = BASS_StreamCreate(infoBass[i].freq, infoBass[i].chans, 0, &MyStreamWriter, 0);
+//	//	stream[i] = BASS_StreamCreate(infoBass[i].freq, infoBass[i].chans, 0,0, 0);
+//	//}
+//	
+//		stream_length[0]=BASS_ChannelGetLength(file_stream[0], 0);
+//		//this->stream_length[0]= BASS_ChannelGetLength(this->file_stream[0], 0);
+//		BASS_ChannelGetInfo(file_stream[0], &infoBass[0]);
+//		//BASS_ChannelGetInfo(this->file_stream[0], &this->infoBass[0]);
+//		data[0] = new char[(unsigned int)stream_length[0]];
+//		//this->data[0] = new char[(unsigned int)this->stream_length[0]];
+//		BASS_ChannelGetData(file_stream[0], data[0], (unsigned int)stream_length[0]);	
+//		//BASS_ChannelGetData(this->file_stream[0], this->data[0], (unsigned int)this->stream_length[0]);	
+//
+//		
+//		stream[0] = BASS_StreamCreate(infoBass[0].freq, infoBass[0].chans, 0,(STREAMPROC*)MyStreamWriter, 0);
+//		//stream[0] = BASS_StreamCreate(infoBass[0].freq, infoBass[0].chans, 0, &cMesh::MyStreamWriter, 0);
+//		
+//		//stream[0] = BASS_StreamCreate(infoBass[0].freq, infoBass[0].chans, 0,0, 0);
+//		
+//	
+//
+//}
 
+//DWORD MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user)
+//{
+//	
+//
+//	//int tb_mulop = pos;
+//    // Cast the buffer to a character array
+//	char *d=(char*)buf;
+//
+//    // Loop the file when it reaches the beginning or end
+//    if ((pos >= stream_length[0]) && (record_direction == 1))
+//		    pos = 0;
+//	if ((pos <= 0) && (record_direction == -1))
+//		    pos = (unsigned int)stream_length[0];
+//
+//	if (pos == 0){
+//		
+//	}
+//
+//	// If record is spinning in positive direction, write requested
+//	// amount of data from current position forwards
+//	if (record_direction == 1)
+//	{
+//		int up = len + pos;
+//		if (up > stream_length[0])
+//			up = (unsigned int)stream_length[0];
+//
+//    for (int i=pos; i<up; i+=1)
+//			d[(i-pos)] = data[0][i];
+//
+//		int amt = (up-pos);
+//		pos += amt;
+//		return amt;
+//	 }
+//
+//    // If record is spinning in negative direction, write requested
+//	// amount of data from current position backwards
+//	if (record_direction == -1)
+//	{
+//		int up = pos - len;
+//
+//		if (up < 0)
+//			up = 0;
+//
+//	    int cnt = 0;
+//        for (int i=pos; i>up; i-=1)
+//                d[cnt++] = data[0][i];
+//
+//		int amt = cnt;
+//		pos -= amt;
+//
+//		return amt;
+//	 }
+//
+//	 return 0;
+//}
