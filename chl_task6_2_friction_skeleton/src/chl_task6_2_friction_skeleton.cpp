@@ -34,7 +34,6 @@ last revision: 07.06.2010*/
 #include <time.h>
 #include "bass.h"
 #include "chai3d.h" 
-//#include <string>     // std::string, std::to_string
 //#include <CMesh.h>
 
 //---------------------------------------------------------------------------
@@ -75,6 +74,13 @@ cBitmap* logo;
 int displayW  = 0;
 int displayH  = 0;
 
+//UI
+cLabel CounterI;
+cLabel CounterC;
+_Longlong inc=0;
+_Longlong cor=0;
+
+void redrawUI();
 // a haptic device handler
 cHapticDeviceHandler* handler;
 
@@ -97,6 +103,7 @@ int aktObj=0;
 
 //Set number of Objects
 int NumObj=6;
+
 
 int multChoice[3];
 static int button;
@@ -136,11 +143,6 @@ bool simulationFinished = false;
 /////////////////////////////////////////////////////////////////////////////////////
 //								AUDIO								   //
 /////////////////////////////////////////////////////////////////////////////////////
-string texture, t_ctr, t_path;
-long double t_val;
-int freq; //0-4
-cVector3d frequency;
-cVector3d force;
 
 //DWORD MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
 //void InitStream();
@@ -160,7 +162,7 @@ int LastID;
 //DWORD CALLBACK MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
 void StartPlayback(cMesh* Obj);
 
-//JULIAN IST EIN HOMOFÜRST
+
 
 
 
@@ -211,8 +213,8 @@ void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff,
 // modify sound according to user action
 void ChangeSound(int ID);
 
-//// load all five sound files of specific texture
-void load_soundfiles(cMesh *DObject ,string texture);
+// load all five sound files of specific texture
+void load_soundfiles(std::string texture);
 
 //===========================================================================
 /*
@@ -243,8 +245,8 @@ int main(int argc, char* argv[]){
 	printf ("-----------------------------------\n");
 	printf ("\n\n");
 	printf ("Instructions:\n\n");
-	printf ("- Use haptic device and user switch to rotate \n");
-	printf ("  rotate and translate DObject. \n");
+	printf ("- Use haptic device and user switch to feel the shape \n");
+	printf ("  and guess the object. \n");
 	printf ("\n\n");
 	printf ("Keyboard Options:\n\n");
 	printf ("[1-5] - Model 1-N \n");	
@@ -273,6 +275,8 @@ int main(int argc, char* argv[]){
 	// create a camera and insert it into the virtual world
 	camera = new cCamera(world);
 	world->addChild(camera);
+
+	
 
 	// position and oriente the camera
 	camera->set( cVector3d (3.0, 0.0, 0.0),    // camera position (eye)
@@ -331,6 +335,18 @@ int main(int argc, char* argv[]){
 	// enable transparency
 	logo->enableTransparency(true);
 
+
+	camera->m_front_2Dscene.addChild(&CounterI);
+	camera->m_front_2Dscene.addChild(&CounterC);
+
+	CounterI.m_fontColor=cColorf(1,0,0,1);
+	CounterC.m_fontColor=cColorf(0,1,0,1);
+
+	CounterI.setPos(500,590,0);	
+	CounterC.setPos(400,590,0);		
+	
+	redrawUI();
+	
 
 	//-----------------------------------------------------------------------
 	// HAPTIC DEVICES / TOOLS
@@ -513,9 +529,13 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStaticFriction(0.15);
 			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);		
 			
-			// load soundfiles
-			texture = "Glass";
-			load_soundfiles(DObject, texture);
+			texture = Glass;
+			for(int sf=0;sf<5;sf++){DObject->finalStream[sf]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/" + texture + "/f" + (sf+1)),0,0,0);}
+			/*DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f1"),0,0,0);
+			DObject->finalStream[1]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f2"),0,0,0);
+			DObject->finalStream[2]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f3"),0,0,0);
+			DObject->finalStream[3]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f4"),0,0,0);
+			DObject->finalStream[4]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f5"),0,0,0);*/
 			break;
 
 		case 1: // bunny
@@ -526,11 +546,13 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStaticFriction(0.4);
 			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
 
+			//DObject->setMaterial(tooth_mat, true);
+			// scaling & rotating
+			//DObject->scale(0.8);
 			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
 
-			// load soundfiles
-			texture = "Cashmere";
-			load_soundfiles(DObject, texture);
+					
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/Kalimba.mp3"),0,0,0);
 			break;
 
 		case 2:	// rock,	granite
@@ -541,11 +563,11 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStaticFriction(0.43);
 			DObject->getChild(0)->m_material.setStiffness(0.6*stiffnessMax);
 
-			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));	
-
-			// load soundfiles
-			texture = "stone_tile";
-			load_soundfiles(DObject, texture);
+			// scaling & rotating
+			//DObject->scale(0.3);
+			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));		
+		
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/Maid with the Flaxen Hair.mp3"),0,0,0);
 			break;
 
 		case 3:	// sponge
@@ -560,10 +582,12 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStaticFriction(0.4);
 			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
 
+			//DObject->setMaterial(sponge_mat, true);
+			// scaling & rotating
+			//DObject->scale(0.1);
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));			
-
-			texture = "Foam_medium";
-			load_soundfiles(DObject, texture);
+			
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/Sleep Away.mp3"),0,0,0);
 			break;
 
 		case 4:	// rock, sandstone		
@@ -585,11 +609,12 @@ int main(int argc, char* argv[]){
 			
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
 			
-			texture = "stone_tile";
-			load_soundfiles(DObject, texture);
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);
 			break;
 
-		 case 5: // Cork
+			
+			//Cork doesn't work
+		 case 5:	 // Cork
 			
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Cork/cork.obj"));
 			
@@ -599,10 +624,11 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
 
 			// scaling & rotating
+			DObject->scale(0.003);
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
 
-			texture = "Cork";
-			load_soundfiles(DObject, texture);
+			DObject->setUseTexture(true);					
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
 			break;	 	
 			
 			/* case 6:	// bottle
@@ -614,8 +640,10 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
 
 			// scaling & rotating
+			DObject->scale(0.003);
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
 
+			DObject->setUseTexture(true);
 			// DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
 			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
 			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
@@ -630,8 +658,10 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);
 
 			// scaling & rotating
+			DObject->scale(0.003);
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
 
+			DObject->setUseTexture(true);
 			// DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
 			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
 			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
@@ -647,8 +677,10 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);
 
 			// scaling & rotating
+			DObject->scale(0.003);
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
 
+			DObject->setUseTexture(true);
 			// DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
 			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
 			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
@@ -795,12 +827,12 @@ void resizeWindow(int w, int h){
 	displayW = w;
 	displayH = h;
 	glViewport(0, 0, displayW, displayH);
+			
 }
 
 //---------------------------------------------------------------------------
 
-void keySelect(unsigned char key, int x, int y){
-	BASS_ChannelStop(Objects[LastID]->finalStream[freq]);
+void keySelect(unsigned char key, int x, int y){	
 	switch(key){
 		case 27:
 		case 'x':
@@ -908,11 +940,15 @@ void menuSelect(int value)
 		// enable full screen display
 	case OPTION_FULLSCREEN:
 		glutFullScreen();
+		CounterI.setPos(1530,990,0);	
+		CounterC.setPos(1430,990,0);
 		break;
 
 		// reshape window to original size
 	case OPTION_WINDOWDISPLAY:
 		glutReshapeWindow(WINDOW_SIZE_W, WINDOW_SIZE_H);
+		CounterI.setPos(500,590,0);	
+		CounterC.setPos(400,590,0);
 		break;
 	}
 }
@@ -956,6 +992,10 @@ void updateHaptics(void)
 {
 	// CH lab
 	tool->setShowEnabled(true, true);
+
+
+
+
 
 	// turn off friction (the original Chai3d friction implementation!)
 	tool->m_proxyPointForceModel->m_useFriction = false;
@@ -1001,7 +1041,8 @@ void updateHaptics(void)
 		{
 		nextState();
 		}*/
-		switch(curState){
+		switch(curState)
+		{
 		case 0:
 			selectSolution();
 			break;
@@ -1010,6 +1051,8 @@ void updateHaptics(void)
 			break;
 		}
 
+
+		
 		// send forces to device
 		tool->applyForces();
 		tool->m_proxyPointForceModel->getForce();
@@ -1038,11 +1081,21 @@ void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff,
 	//}	
 }
 
+
+void redrawUI(){
+	
+	string Wrongs="INCORRECT: " + to_string(inc);
+	string Rights="CORRECT: " + to_string(cor);
+	CounterI.m_string=Wrongs;
+	CounterC.m_string=Rights;
+}
+
 //---------------------------------------------------------------------------
 
 void startGame(void){
 	curState=0;
 	checkBoxColl=false;
+	tool->setWorkspaceRadius(1.0);
 	for(int s=0;s<Objects.size();s++){
 		Objects[s]->setShowBox(false);
 		Objects[s]->setPos(0,0,0);
@@ -1110,6 +1163,7 @@ void selectSolution(void){
 		camera->set( cVector3d (9.0, 0.0, 0.0),    // camera position (eye)
 			cVector3d (0.0, 0.0, 0.0),    // lookat position (target)
 			cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
+		tool->setWorkspaceRadius(5.0);
 		checkBoxColl=true;
 		newButPush=false;
 	}
@@ -1154,12 +1208,17 @@ void checkSolution(void){
 		{
 			Objects[selectedModel]->setShowBox(true);
 			Objects[selectedModel]->setBoxColor(cColorf(0,1,0,1));
-			cout<<"RIGHT"<<endl;
+			cout<<"RIGHT"<<endl;			
+			cor++;
+			redrawUI();
+
 			cout <<"Press n for new Game"<<endl;			
 		}
 		else{
 			cout<<"WRONG"<<endl;
 			cout <<"Press n for new Game"<<endl;
+			inc++;
+			redrawUI();
 			Objects[selectedModel]->setShowBox(true);
 			Objects[realModel]->setShowBox(true);
 			Objects[selectedModel]->setBoxColor(cColorf(1,0,0,1));
@@ -1195,6 +1254,9 @@ void ChangeSound(int ID){
 	//define maximum depth and maximum volume for material
 	/*static const depth_max = 10;
 	static const max_vol_material;*/
+	int freq; //0-4
+	cVector3d frequency;
+	cVector3d force;
 
 	force= tool->m_lastComputedGlobalForce;
 	//cout <<"Force: " <<force;
@@ -1216,14 +1278,9 @@ void ChangeSound(int ID){
 
 //---------------------------------------------------------------------------
 
-void load_soundfiles(cMesh *DObject ,string texture){
-	for(int sf=0;sf<5;sf++){
-		t_val = sf + 1;
-		t_ctr = std::to_string(t_val);
-		t_path = "resources/sounds/oneSec/" + texture + "/f" + t_ctr + ".wav";
-		DObject->finalStream[sf]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH(t_path),0,0,0);
-	}
-}
+//void load_soundfiles(std::string texture){
+//	
+//}
 
 //---------------------------------------------------------------------------
 
