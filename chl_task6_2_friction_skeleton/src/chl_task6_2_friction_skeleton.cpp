@@ -205,8 +205,8 @@ bool useFriction = true;
 // them to the children
 void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff, const double& dynamic_coeff);
 
-
-
+// modify sound according to user action
+void ChangeSound(cMesh* Obj, double depth = 0, double velocity = 0);
 
 
 
@@ -226,7 +226,7 @@ The interaction forces are then computed and sent to the device.
 //===========================================================================
 
 int main(int argc, char* argv[]){
-	
+
 	//-----------------------------------------------------------------------
 	// INITIALIZATION
 	//-----------------------------------------------------------------------
@@ -250,9 +250,9 @@ int main(int argc, char* argv[]){
 
 	// parse first arg to try and locate resources
 	resourceRoot = string(argv[0]).substr(0,string(argv[0]).find_last_of("/\\")+1);
-	
-	
-	
+
+
+
 	srand (time(NULL));
 
 	//-----------------------------------------------------------------------
@@ -389,12 +389,12 @@ int main(int argc, char* argv[]){
 
 
 	// Initialize sound device and create audio stream
-    BASS_Init(1,44100,0,0,NULL);
+	BASS_Init(1,44100,0,0,NULL);
 
 	//Load Sound Files
 	//// Load the data from the specified file
- //   HSTREAM file_stream = 1;
- //   file_stream = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
+	//   HSTREAM file_stream = 1;
+	//   file_stream = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
 
 	//HSTREAM file_stream_mat[NBR_TEXTURES][NBR_VELOCITIES] = {1,1,1,1,1};
 	//file_stream_mat[0][0] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
@@ -416,10 +416,10 @@ int main(int argc, char* argv[]){
 	//}
 	//if (!fileload)
 	//{
- //       printf("error - mp3 audio file failed to load correctly.\n");
- //       close();
- //       return (-1);
- //   }
+	//       printf("error - mp3 audio file failed to load correctly.\n");
+	//       close();
+	//       return (-1);
+	//   }
 
 
 	/////////////////////////////////////////////////////////////////////////////////////
@@ -461,26 +461,31 @@ int main(int argc, char* argv[]){
 	mat.m_specular.set(1.0, 1.0, 1.0);
 
 
-	cMaterial tooth_mat;
-	tooth_mat.m_ambient.set(0.5, 0.5, 0.5);		
-	tooth_mat.m_specular.set(1.0, 1.0, 1.0);
-	tooth_mat.setStiffness(0.8*stiffnessMax); //MaxStiffness:74, Max Force:4;
-	tooth_mat.setDynamicFriction(0.2);
-	tooth_mat.setStaticFriction(0.15);
-	
+	//cMaterial tooth_mat;
+	//tooth_mat.m_ambient.set(0.5, 0.5, 0.5);		
+	//tooth_mat.m_specular.set(1.0, 1.0, 1.0);
+	//tooth_mat.setStiffness(0.8*stiffnessMax); //MaxStiffness:74, Max Force:4;
+	//tooth_mat.setDynamicFriction(0.2);
+	//tooth_mat.setStaticFriction(0.15);
 
-	cMaterial rock_mat;
-	rock_mat.m_ambient.set(0.5, 0.5, 0.5);
-	//rock_mat.m_diffuse.set(0.1, 0.8, 0.8);
-	rock_mat.m_specular.set(1.0, 1.0, 1.0);
-	rock_mat.setStiffness(0.8*stiffnessMax); //MaxStiffness:74, Max Force:4;
-	rock_mat.setDynamicFriction(0.45);
-	rock_mat.setStaticFriction(0.4);
 
-	
+	//cMaterial rock_mat;
+	//rock_mat.m_ambient.set(0.5, 0.5, 0.5);
+	////rock_mat.m_diffuse.set(0.1, 0.8, 0.8);
+	//rock_mat.m_specular.set(1.0, 1.0, 1.0);
+	//rock_mat.setStiffness(0.8*stiffnessMax); //MaxStiffness:74, Max Force:4;
+	//rock_mat.setDynamicFriction(0.45);
+	//rock_mat.setStaticFriction(0.4);
 
 
 
+
+	// switch chooses the correct object and sets the attributes of the object
+	// 1) load object
+	// 2) set material (friction, stiffness, ...)
+	// 3) scale and rotate the object
+	// 4) activate texture
+	// 5) load sound files
 	for(int it=0;it<NumObj;it++){
 		cMesh *DObject = new cMesh(world);
 		//DObject=new cMesh(world);
@@ -494,167 +499,180 @@ int main(int argc, char* argv[]){
 		DObject->setTag(it);
 		fileload = false;
 		// load an object file
-		switch(it)
-		{
-		case 0:			
-		fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/tooth/tooth.3ds"));
-		if (!fileload)
-		{
-#if defined(_MSVC)
-			fileload = DObject->loadFromFile("../../../bin/resources/models/tooth/tooth.3ds");
-#endif
-		}
-		if (!fileload)
-		{
-			printf("Error - 3D Model failed to load correctly.\n");
-			close();
-			return (-1);
-		}
+		switch(it){
 
-	
-		
-		DObject->setMaterial(tooth_mat, true);
-		DObject->scale(0.003);
-		DObject->setUseTexture(true);
-		//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
-		file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
-		DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
-		break;
-		case 1:
+		case 0: // tooth			
+			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/tooth/tooth.3ds"));
+
+			// dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8
+			DObject->getChild(0)->m_material.setDynamicFriction(0.2);
+			DObject->getChild(0)->m_material.setStaticFriction(0.15);
+			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);
+
+			//DObject->setMaterial(tooth_mat, true);
+			// scaling & rotating
+			DObject->scale(0.003);
+
+			DObject->setUseTexture(true);
+			//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
+			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
+			break;
+
+		case 1: // bunny
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/bunny/bunny.obj"));
-		if (!fileload)
-		{
-#if defined(_MSVC)
-			fileload = DObject->loadFromFile("../../../bin/resources/models/bunny/bunny.obj");
-#endif
-		}
-		DObject->setMaterial(tooth_mat, true);
-		DObject->scale(0.8);
-		DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
-		//DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
-		file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
-		DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);
-		
-		break;
-		case 2:			
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock1.obj"));
-			if (!fileload)
-			{
-#if defined(_MSVC)
-				fileload = DObject->loadFromFile("../../../bin/resources/models/Stone/Rock1.obj");
-#endif
-			}
-			if (!fileload)
-			{
-				printf("Error - 3D Model failed to load correctly.\n");
-				close();
-				return (-1);
-			}
 
-			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
-			//DObject->setMaterial(rock_mat, true);
+			// dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
 			DObject->getChild(0)->m_material.setDynamicFriction(0.3);
 			DObject->getChild(0)->m_material.setStaticFriction(0.4);
 			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
-			DObject->scale(0.3);
+
+			//DObject->setMaterial(tooth_mat, true);
+			// scaling & rotating
+			DObject->scale(0.8);
+			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
+
 			DObject->setUseTexture(true);
-			//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
-			//DObject->InitStream();
-			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
+			//DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
+			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);
 			break;
 
+		case 2:	// rock,	granite
+			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock1.obj"));
 
-		case 3:			
+			// dyn_fric = 0.3, stat_fric = 0.43, stiff = 0.6
+			DObject->getChild(0)->m_material.setDynamicFriction(0.3);
+			DObject->getChild(0)->m_material.setStaticFriction(0.43);
+			DObject->getChild(0)->m_material.setStiffness(0.6*stiffnessMax);
+
+			// scaling & rotating
+			DObject->scale(0.3);
+			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
+
+			DObject->setUseTexture(true);
+			//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
+			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);
+			break;
+
+		case 3:	// sponge
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Schwamm/sponge.obj"));
-			/*if (!fileload)
-			{
-#if defined(_MSVC)
-				fileload = DObject->loadFromFile("../../../bin/resources/models/tooth/tooth.3ds");
-#endif
-			}*/
-			if (!fileload)
-			{
-				printf("Error - 3D Model failed to load correctly.\n");
-				close();
-				return (-1);
-			}
 
-			//cMaterial sponge_mat;
-			////rock_mat.m_ambient.set(0.5, 0.5, 0.5);
-			////rock_mat.m_diffuse.set(0.1, 0.8, 0.8);
-			////rock_mat.m_specular.set(1.0, 1.0, 1.0);
-			//sponge_mat.setStiffness(0.1*stiffnessMax); //MaxStiffness:74, Max Force:4;
-			//sponge_mat.setDynamicFriction(0.2);
-			//sponge_mat.setStaticFriction(0.15);
-
+			// upper part: dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.1		
 			DObject->getChild(1)->m_material.setDynamicFriction(0.2);
 			DObject->getChild(1)->m_material.setStaticFriction(0.25);
 			DObject->getChild(1)->m_material.setStiffness(0.1*stiffnessMax);
+			// power part: dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
 			DObject->getChild(0)->m_material.setDynamicFriction(0.3);
 			DObject->getChild(0)->m_material.setStaticFriction(0.4);
 			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
 
-
-
-			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
 			//DObject->setMaterial(sponge_mat, true);
+			// scaling & rotating
 			DObject->scale(0.1);
-		DObject->setUseTexture(true);
-		//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
-		file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
-		break;
-
-		case 4:			
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock_rough.obj"));
-			if (!fileload)
-			{
-#if defined(_MSVC)
-				fileload = DObject->loadFromFile("../../../bin/resources/models/Stone/Rock_rough.obj");
-#endif
-			}
-			if (!fileload)
-			{
-				printf("Error - 3D Model failed to load correctly.\n");
-				close();
-				return (-1);
-			}
-
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
-			DObject->setMaterial(rock_mat, true);
+
+			DObject->setUseTexture(true);
+			//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
+			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);
+			break;
+
+		case 4:	// rock, sandstone		
+			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock_rough.obj"));
+
+			// dyn_fric = 0.4, stat_fric = 0.51, stiff = 0.6
+			DObject->getChild(0)->m_material.setDynamicFriction(0.4);
+			DObject->getChild(0)->m_material.setStaticFriction(0.51);
+			DObject->getChild(0)->m_material.setStiffness(0.6*stiffnessMax);
+
+			// DObject->setMaterial(rock_mat, true);
+			// scaling & rotating
 			DObject->scale(0.3);
+			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
+
 			DObject->setUseTexture(true);
 			//DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
 			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
 			break;
-	
-		//Cork doesn't work
-//		case 5:			
-//			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Cork/cork.obj"));
-//				
-//			if (!fileload)
-//			{
-//#if defined(_MSVC)
-//				fileload = DObject->loadFromFile("../../../bin/resources/models/cork/cork.obj");
-//
-//#endif
-//			}
-//			if (!fileload)
-//			{
-//				printf("Error - 3D Model failed to load correctly.\n");
-//				close();
-//				return (-1);
-//			}
-//
-//			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
-//			DObject->setMaterial(rock_mat, true);
-//			DObject->scale(0.1);
-//			DObject->setUseTexture(true);
-//			//DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
-//			break;
 
+			
+			//Cork doesn't work
+		/* case 5:	 // Cork
+			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/cork/cork.obj"));
 
+			// dyn_fric = 0.5, stat_fric = 0.5, stiff = ??
+			DObject->getChild(0)->m_material.setDynamicFriction(0.5);
+			DObject->getChild(0)->m_material.setStaticFriction(0.5);
+			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
 
-		}
+			// scaling & rotating
+			DObject->scale(0.003);
+			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
+
+			DObject->setUseTexture(true);
+			// DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
+			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
+			break;	 */	
+			
+			/* case 6:	// bottle
+			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/cork/cork.obj"));
+
+			// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
+			DObject->getChild(0)->m_material.setDynamicFriction(0.2);
+			DObject->getChild(0)->m_material.setStaticFriction(0.25);
+			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
+
+			// scaling & rotating
+			DObject->scale(0.003);
+			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
+
+			DObject->setUseTexture(true);
+			// DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
+			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
+			break;	 */	
+			
+			/* case 7:	// ice
+			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/cork/cork.obj"));
+
+			// dyn_fric = 0.02, stat_fric = 0.03, stiff = 0.8
+			DObject->getChild(0)->m_material.setDynamicFriction(0.02);
+			DObject->getChild(0)->m_material.setStaticFriction(0.03);
+			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);
+
+			// scaling & rotating
+			DObject->scale(0.003);
+			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
+
+			DObject->setUseTexture(true);
+			// DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
+			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
+			break;	 */	
+			
+			
+		/* case 8:	// (shot) glass
+			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/cork/cork.obj"));
+
+			// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
+			DObject->getChild(0)->m_material.setDynamicFriction(0.15);
+			DObject->getChild(0)->m_material.setStaticFriction(0.19);
+			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);
+
+			// scaling & rotating
+			DObject->scale(0.003);
+			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
+
+			DObject->setUseTexture(true);
+			// DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
+			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
+			break;	 */	
+		} // end of case statement
+		
 		//// make the outside of the DObject rendered in wireframe
 		//((cMesh*)(DObject->getChild(1)))->setWireMode(true);
 
@@ -662,34 +680,30 @@ int main(int argc, char* argv[]){
 		//((cMesh*)(DObject->getChild(1)))->setUseTransparency(false);
 		//((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
 
-		
-
 		// resize DObject to screen
-		
 
 		
+		// 5) compute boundary box
+		// 6) create collision detector
+		// 8) intialize stream
 
 		DObject->setShowEnabled(false, true);
-
 		//// compute a boundary box
 		DObject->computeBoundaryBox(true);
 		// compute collision detection algorithm		
 		DObject->createAABBCollisionDetector(1.01 * proxyRadius, true, false);
-		
+
 		//DObject->InitStream();
 		//InitStream();
 		//DObject->finalStream[0]=stream[0];
 		//BASS_ChannelPlay(DObject->finalStream[0],FALSE);
 
-		
+
 		Objects.push_back(DObject);	
 
 		//TODO Ghost objects
 
 	}
-
-
-
 
 	// create a new mesh.
 	drill = new cMesh(world);
@@ -781,8 +795,7 @@ int main(int argc, char* argv[]){
 
 //---------------------------------------------------------------------------
 
-void resizeWindow(int w, int h)
-{
+void resizeWindow(int w, int h){
 	// update the size of the viewport
 	displayW = w;
 	displayH = h;
@@ -791,138 +804,100 @@ void resizeWindow(int w, int h)
 
 //---------------------------------------------------------------------------
 
-void keySelect(unsigned char key, int x, int y)
-{
+void keySelect(unsigned char key, int x, int y){
+	switch(key){
+		case 27:
+		case 'x':
+			close();
+			exit(0);
+			break;
+			
+		case '0':
+			for(int l=0;l<Objects.size();l++){
+				Objects[l]->setShowEnabled(false,true);
+			}
+			Objects[0]->setShowEnabled(true,true);
+			break;
+			
+		case '1':	
+			for(int l=0;l<Objects.size();l++){
+				Objects[l]->setShowEnabled(false,true);
+			}
+			Objects[1]->setShowEnabled(true,true);
+			break;
+			
+		case '2':
+			for(int l=0;l<Objects.size();l++){
+				Objects[l]->setShowEnabled(false,true);
+			}
+			Objects[2]->setShowEnabled(true,true);
+			break;
+
+		case '3':
+			for(int l=0;l<Objects.size();l++){
+				Objects[l]->setShowEnabled(false,true);
+			}
+			Objects[3]->setShowEnabled(true,true);
+			break;
+
+		case '4':
+			for(int l=0;l<Objects.size();l++){
+				Objects[l]->setShowEnabled(false,true);
+			}
+			Objects[4]->setShowEnabled(true,true);
+			break;
+
+		case '5':
+			for(int l=0;l<Objects.size();l++){
+				Objects[l]->setShowEnabled(false,true);
+			}
+			Objects[5]->setShowEnabled(true,true);
+			break;
+
+		case '-'
+			//	// decrease transparency level
+			//	transparencyLevel = transparencyLevel - 0.1;
+			//	if (transparencyLevel < 0.0) { transparencyLevel = 0.0; }
+
+			//	// apply changes to DObject
+			//	((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
+			//	((cMesh*)(DObject->getChild(1)))->setUseTransparency(true);
+
+			//	((cMesh*)(DObject->getChild(0)))->setTransparencyLevel(transparencyLevel);
+			//	((cMesh*)(DObject->getChild(0)))->setUseTransparency(true);
+
+			//	// if object is almost transparent, make it invisible
+			//	if (transparencyLevel < 0.1){
+			//		//((cMesh*)(DObject->getChild(1)))->setShowEnabled(false, true);
+			//	}
+			break;
+
+		case '+':
+			//	// increase transparency level
+			//	transparencyLevel = transparencyLevel + 0.1;
+			//	if (transparencyLevel > 1.0) { transparencyLevel = 1.0; }
+
+			//	// apply changes to DObject
+			//	((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
+
+			//	// make object visible
+			//	if (transparencyLevel >= 0.1)
+			//	{
+			//		((cMesh*)(DObject->getChild(1)))->setShowEnabled(true, true);
+			//	}
+
+			//	// disable transparency is transparency level is set to 1.0
+			//	if (transparencyLevel == 1.0)
+			//	{
+			//		((cMesh*)(DObject->getChild(1)))->setUseTransparency(false);
+			//	}
+			break;
+			
+		case 'n':
+			startGame();
+			break;			
+	}	
 	
-	// escape key
-	if ((key == 27) || (key == 'x'))
-	{
-		// close everything
-		close();
-
-		// exit application
-		exit(0);
-	}
-	if (key == '0')
-	{	for(int l=0;l<Objects.size();l++){
-		Objects[l]->setShowEnabled(false,true);
-	}
-		Objects[0]->setShowEnabled(true,true);
-
-	}
-
-	// option 1:
-	if(key=='1')
-	{	for(int l=0;l<Objects.size();l++){
-		Objects[l]->setShowEnabled(false,true);
-		}
-		Objects[1]->setShowEnabled(true,true);
-		
-	}
-		// only enable/disable wireframe of one part of the DObject model
-		/*bool useWireMode = ((cMesh*)(DObject->getChild(1)))->getWireMode();
-		((cMesh*)(DObject->getChild(1)))->setWireMode(!useWireMode);*/
-	
-
-	// option 2:
-	if (key == '2')
-	
-	{
-		for(int l=0;l<Objects.size();l++){
-		Objects[l]->setShowEnabled(false,true);
-	}
-		Objects[2]->setShowEnabled(true,true);
-
-
-		/*bool showNormals = DObject->getShowNormals();
-		DObject->setShowNormals(!showNormals, true);
-		DObject->setNormalsProperties(0.05, cColorf(1.0, 0.0, 0.0), true);*/
-	}
-
-	if(key == '3')
-	{
-		/*useFriction = !useFriction;
-
-		if(useFriction)
-			printf("Friction rendering: ON\n");
-		else
-
-			printf("Friction rendering: OFF\n");*/
-		for(int l=0;l<Objects.size();l++){
-			Objects[l]->setShowEnabled(false,true);
-		}
-		Objects[3]->setShowEnabled(true,true);
-	}
-
-	if(key == '4')
-	{
-	
-		for(int l=0;l<Objects.size();l++){
-			Objects[l]->setShowEnabled(false,true);
-		}
-		Objects[4]->setShowEnabled(true,true);
-	}
-	
-	if(key == '5')
-	{
-	
-		for(int l=0;l<Objects.size();l++){
-			Objects[l]->setShowEnabled(false,true);
-		}
-		Objects[5]->setShowEnabled(true,true);
-	}
-
-	// option -:
-	if (key == '-')
-	{
-	//	// decrease transparency level
-	//	transparencyLevel = transparencyLevel - 0.1;
-	//	if (transparencyLevel < 0.0) { transparencyLevel = 0.0; }
-
-	//	// apply changes to DObject
-	//	((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
-	//	((cMesh*)(DObject->getChild(1)))->setUseTransparency(true);
-
-	//	((cMesh*)(DObject->getChild(0)))->setTransparencyLevel(transparencyLevel);
-	//	((cMesh*)(DObject->getChild(0)))->setUseTransparency(true);
-
-	//	// if object is almost transparent, make it invisible
-	//	if (transparencyLevel < 0.1)
-	//	{
-	//		//((cMesh*)(DObject->getChild(1)))->setShowEnabled(false, true);
-	//	}
-	}
-
-	// option +:
-	//if (key == '+')
-	//{
-	//	// increase transparency level
-	//	transparencyLevel = transparencyLevel + 0.1;
-	//	if (transparencyLevel > 1.0) { transparencyLevel = 1.0; }
-
-	//	// apply changes to DObject
-	//	((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
-
-	//	// make object visible
-	//	if (transparencyLevel >= 0.1)
-	//	{
-	//		((cMesh*)(DObject->getChild(1)))->setShowEnabled(true, true);
-	//	}
-
-	//	// disable transparency is transparency level is set to 1.0
-	//	if (transparencyLevel == 1.0)
-	//	{
-	//		((cMesh*)(DObject->getChild(1)))->setUseTransparency(false);
-	//	}
-	//}
-	if (key == 'n')
-	{
-		startGame();
-	}
-
-
-
-
 }
 
 //---------------------------------------------------------------------------
@@ -931,7 +906,7 @@ void keySelect(unsigned char key, int x, int y)
 
 void menuSelect(int value)
 {
-	
+
 	switch (value)
 	{
 		// enable full screen display
@@ -976,10 +951,7 @@ void updateGraphics(void)
 	if (err != GL_NO_ERROR) printf("Error:  %s\n", gluErrorString(err));
 
 	// inform the GLUT window to call updateGraphics again (next frame)
-	if (simulationRunning)
-	{
-		glutPostRedisplay();
-	}
+	if (simulationRunning){	glutPostRedisplay();}
 }
 
 //---------------------------------------------------------------------------
@@ -989,12 +961,6 @@ void updateHaptics(void)
 	// CH lab
 	tool->setShowEnabled(true, true);
 
-	// set the static and dynamic friction coefficients
-	static_coeff = 0.5;
-	dynamic_coeff = 0.3;
-
-	
-
 	// set the static and dynamic friction coefficients for the object (propagating 
 	// them to the children)
 	/*for(unsigned int i = 0; i < DObject->getNumChildren(); i++)
@@ -1002,6 +968,10 @@ void updateHaptics(void)
 	//ch_setFrictionCoefficients(Objects.at(1), static_coeff, dynamic_coeff);		--BUUUUUG
 	//}
 
+	// warum??????????????????????????????????????????????????????????????????
+	// set the static and dynamic friction coefficients
+	static_coeff = 0.5;
+	dynamic_coeff = 0.3;
 	Objects.at(1)->m_material.setDynamicFriction(dynamic_coeff);
 	Objects.at(1)->m_material.setStaticFriction(static_coeff);
 
@@ -1030,36 +1000,30 @@ void updateHaptics(void)
 		//cGenericObject* GObject = tool->m_proxyPointForceModel->m_contactPoint0->m_object; 
 		//TODO Change to for Loop if Hstream member keeps empty
 		if(ContObject!=NULL){
-			
-		if (tool->isInContact(ContObject)){		 
-			
-		StartPlayback(ContObject);
-		 }
+			if (tool->isInContact(ContObject)){		 
+				StartPlayback(ContObject);
+			}
 		}
 		else BASS_ChannelStop(stream[0]);
-		
-		
-
-
 
 		button = tool->getUserSwitch(0);
 		if(button==0)	newButPush=true;
 		//std::cout<<"Dist"<<tool->getDeviceGlobalPos()<<std::endl ;
-		
-	/*	 if (button == 1)
-        {
-           nextState();
-        }*/
-		 switch(curState)
+
+		/*	 if (button == 1)
+		{
+		nextState();
+		}*/
+		switch(curState)
 		{
 		case 0:
 			selectSolution();
-		break;
-			case 1 :
+			break;
+		case 1 :
 			checkSolution();
-		break;
+			break;
 		}
-	
+
 
 
 		// send forces to device
@@ -1079,8 +1043,7 @@ void updateHaptics(void)
 // ch lab
 // set static and dynamic friction coefficients for the object, propagating 
 // them to the children
-void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff, const double& dynamic_coeff)
-{
+void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff, const double& dynamic_coeff){
 	//obj->m_material.setDynamicFriction(dynamic_coeff);
 	//obj->m_material.setStaticFriction(static_coeff);
 
@@ -1089,6 +1052,9 @@ void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff,
 	//	ch_setFrictionCoefficients(obj->getChild(i), static_coeff, dynamic_coeff);		
 	//}	
 }
+
+//---------------------------------------------------------------------------
+
 void startGame(void){
 	curState=0;
 	checkBoxColl=false;
@@ -1096,7 +1062,7 @@ void startGame(void){
 		Objects[s]->setShowBox(false);
 		Objects[s]->setPos(0,0,0);
 
-					}
+	}
 
 	camera->set( cVector3d (3.0, 0.0, 0.0),    // camera position (eye)
 		cVector3d (0.0, 0.0, 0.0),    // lookat position (target)
@@ -1111,65 +1077,66 @@ void startGame(void){
 	//Objects[realModel]->setHapticEnabled(true,true);
 
 	Objects[realModel]->setTransparencyLevel(0);
-
-	 
 }
+
+//---------------------------------------------------------------------------
+
 void selectSolution(void){
 	if(button==1 && newButPush==1 && checkBoxColl==false){
-	vector <int> list;
-	//fill list
-	for(int l=0;l<Objects.size();l++){
-		Objects[l]->setShowEnabled(false,true);		
-		list.push_back(l);
-	}
-	list.erase(list.begin()+realModel);
-	//Choose Random elements from List
-	int el;
-	for(int i=0;i<2;i++){
-		el=rand() % list.size();
-		
-		multChoice[i]=list.at(el);
-		std::cout <<"El:" << multChoice[i];
-		list.erase(list.begin()+el);
-	}
-	multChoice[2]=realModel;
-	//Shuffle Multiple Choice Elements
-	int buf1;
-	int swap;
-	for(int w=0;w<2;w++)
-	{	
-		swap=rand()%2;
-		buf1 = multChoice[2];
-		multChoice[2]=multChoice[swap];
-		multChoice[swap]=buf1;
+		vector <int> list;
+		//fill list
+		for(int l=0;l<Objects.size();l++){
+			Objects[l]->setShowEnabled(false,true);		
+			list.push_back(l);
+		}
+		list.erase(list.begin()+realModel);
+		//Choose Random elements from List
+		int el;
+		for(int i=0;i<2;i++){
+			el=rand() % list.size();
+
+			multChoice[i]=list.at(el);
+			std::cout <<"El:" << multChoice[i];
+			list.erase(list.begin()+el);
+		}
+		multChoice[2]=realModel;
+		//Shuffle Multiple Choice Elements
+		int buf1;
+		int swap;
+		for(int w=0;w<2;w++)
+		{	
+			swap=rand()%2;
+			buf1 = multChoice[2];
+			multChoice[2]=multChoice[swap];
+			multChoice[swap]=buf1;
+		}
+
+		Objects[multChoice[0]]->setPos(0.0, -1.5, 0.0);
+		Objects[multChoice[1]]->setPos(0.0, 0.0, 0.0);
+		Objects[multChoice[2]]->setPos(0.0, 1.5, 0.0);	
+
+		for(int k=0;k<3;k++){
+			Objects[multChoice[k]]->setShowEnabled(true,true);	
+			Objects[multChoice[k]]->setUseTransparency(false,true);
+			Objects[multChoice[k]]->setShowBox(true);
+			Objects[multChoice[k]]->setBoxColor(cColorf(1,0,0,1));
+			distToObj[k] = Objects[multChoice[k]]->getBoundaryMax().distance(Objects[multChoice[k]]->getBoundaryCenter());
+		}
+		camera->set( cVector3d (7.0, 0.0, 0.0),    // camera position (eye)
+			cVector3d (0.0, 0.0, 0.0),    // lookat position (target)
+			cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
+		checkBoxColl=true;
+		newButPush=false;
 	}
 
-	Objects[multChoice[0]]->setPos(0.0, -1.5, 0.0);
-	Objects[multChoice[1]]->setPos(0.0, 0.0, 0.0);
-	Objects[multChoice[2]]->setPos(0.0, 1.5, 0.0);	
-
-	for(int k=0;k<3;k++){
-	Objects[multChoice[k]]->setShowEnabled(true,true);	
-	Objects[multChoice[k]]->setUseTransparency(false,true);
-	Objects[multChoice[k]]->setShowBox(true);
-	Objects[multChoice[k]]->setBoxColor(cColorf(1,0,0,1));
-	distToObj[k] = Objects[multChoice[k]]->getBoundaryMax().distance(Objects[multChoice[k]]->getBoundaryCenter());
-	}
-	camera->set( cVector3d (7.0, 0.0, 0.0),    // camera position (eye)
-		cVector3d (0.0, 0.0, 0.0),    // lookat position (target)
-		cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
-	checkBoxColl=true;
-	newButPush=false;
-	}
-	
 	else if(checkBoxColl==true){
-		
+
 		//tool->m_proxyPointForceModel->m_contactPoint0->m_object->m_tag;
-		
+
 		for(int j=0;j<3;j++){
-		//distToObj[j] = Objects[multChoice[j]]->getBoundaryMax().distance(Objects[multChoice[j]]->getBoundaryCenter());
+			//distToObj[j] = Objects[multChoice[j]]->getBoundaryMax().distance(Objects[multChoice[j]]->getBoundaryCenter());
 			//if(tool->isInContact(Objects[multChoice[0]])){
-		if(tool->getDeviceGlobalPos().distance(Objects[multChoice[j]]->getGlobalPos()) < distToObj[j] ){
+			if(tool->getDeviceGlobalPos().distance(Objects[multChoice[j]]->getGlobalPos()) < distToObj[j] ){
 				Objects[multChoice[j]]->setBoxColor(cColorf(0,1,0,1));					
 				//Objects[multChoice[j]]->m_material.m_diffuse.set(0,0,1);
 				if(newButPush==1 && button==1){			
@@ -1180,55 +1147,84 @@ void selectSolution(void){
 					newResult=true;
 					curState=1;
 				}
-				
+
+			}
+			else Objects[multChoice[j]]->setBoxColor(cColorf(1,0,0,1));	
 		}
-		else Objects[multChoice[j]]->setBoxColor(cColorf(1,0,0,1));	
-		}
-		
 	}
-
-	
-
-	
-
 }
+
+//---------------------------------------------------------------------------
+
 void nextState(void){
-	
-	
+
+// was soll das???
 }
+
+//---------------------------------------------------------------------------
+
 void checkSolution(void){		
 	if(newResult){
-	if(selectedModel==realModel)
+		if(selectedModel==realModel)
 		{
 			Objects[selectedModel]->setShowBox(true);
 			Objects[selectedModel]->setBoxColor(cColorf(0,1,0,1));
 			cout<<"RIGHT"<<endl;
 			cout <<"Press n for new Game"<<endl;			
 		}
-	else{
-		cout<<"WRONG"<<endl;
-		cout <<"Press n for new Game"<<endl;
-		Objects[selectedModel]->setShowBox(true);
-		Objects[realModel]->setShowBox(true);
-		Objects[selectedModel]->setBoxColor(cColorf(1,0,0,1));
-		Objects[realModel]->setBoxColor(cColorf(0,1,0,1));
-	}
-	newResult=false;
+		else{
+			cout<<"WRONG"<<endl;
+			cout <<"Press n for new Game"<<endl;
+			Objects[selectedModel]->setShowBox(true);
+			Objects[realModel]->setShowBox(true);
+			Objects[selectedModel]->setBoxColor(cColorf(1,0,0,1));
+			Objects[realModel]->setBoxColor(cColorf(0,1,0,1));
+		}
+		newResult=false;
 	}
 	/*close();
 	exit(0);*/
-	}
+}
+
+//---------------------------------------------------------------------------
+
 void StartPlayback(cMesh* Obj){	
-	
-		
+
+
 	//BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_FREQ, 500);
-	
+  
 	//cout<< Obj->finalStream[0];
 	//BASS_ChannelPlay(Obj->finalStream[0],FALSE);
 	//cout << BASS_ChannelPlay(file_stream[0],FALSE);
 	//BASS_ChannelPlay(Obj->finalStream[0],FALSE);
 	cout <<BASS_ErrorGetCode();
 }
+
+//---------------------------------------------------------------------------
+
+void ChangeSound(cMesh* Obj, double depth, double velocity){
+	// doku: http://www.bass.radio42.com/help/html/f00d6245-b20b-f37d-7982-8cc6549f4ae3.htm
+	// http://www.bass.radio42.com/help/html/937729d8-fb7a-497d-a1d5-951f42873d58.htm
+	
+	// define maximum depth and maximum volume for material
+	static const depth_max = 10;
+	static const max_vol_material;
+	// calculate output volume
+	if (depth < depth_max) {volume = (depth/depth_max) * max_vol_material;}
+	else {colume = max_vol_material;}
+	// apply volume
+	BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_MUSIC_VOL_CHAN, volume); // range 0 - 1
+	BASS_ChannelSetAttribute(Obj->stream[0], BBASS_ATTRIB_MUSIC_VOL_GLOBAL, volume);
+	
+	frequency = log2(velocity)
+
+	BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_FREQ, frequency);
+}
+
+//---------------------------------------------------------------------------
+
+// random bullsch!
+
 //void InitStream(){
 //	//for(int i=0; i<=5;i++){
 //	//	this->stream_length[i]= BASS_ChannelGetLength(this->file_stream[i], 0);
