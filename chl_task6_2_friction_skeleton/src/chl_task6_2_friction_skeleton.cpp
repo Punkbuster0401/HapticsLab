@@ -136,22 +136,20 @@ bool simulationFinished = false;
 /////////////////////////////////////////////////////////////////////////////////////
 //								AUDIO								   //
 /////////////////////////////////////////////////////////////////////////////////////
-// size of sound data
-const int NBR_TEXTURES = 1;
-const int NBR_VELOCITIES = 5;
-DWORD MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
-void InitStream();
+
+//DWORD MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
+//void InitStream();
 
 
 // Global variables for the audio stream
 static const int numStreams=5;
-HSTREAM file_stream[numStreams];
-HSTREAM stream[numStreams];
-QWORD stream_length[numStreams];
-BASS_CHANNELINFO infoBass[numStreams];
-char *data[numStreams];
-int record_direction=1 ;
-unsigned int pos=0;
+//HSTREAM file_stream[numStreams];
+//HSTREAM stream[numStreams];
+//QWORD stream_length[numStreams];
+//BASS_CHANNELINFO infoBass[numStreams];
+//char *data[numStreams];
+
+
 int LastID;
 // Write the requested data from the loaded buffer to the sound card
 //DWORD CALLBACK MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
@@ -206,7 +204,7 @@ bool useFriction = true;
 void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff, const double& dynamic_coeff);
 
 // modify sound according to user action
-void ChangeSound(cMesh* Obj, double depth = 0, double velocity = 0);
+void ChangeSound(int ID);
 
 
 
@@ -507,20 +505,8 @@ int main(int argc, char* argv[]){
 			// dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8
 			DObject->getChild(0)->m_material.setDynamicFriction(0.2);
 			DObject->getChild(0)->m_material.setStaticFriction(0.15);
-			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);
-
-			//DObject->setMaterial(tooth_mat, true);
-			// scaling & rotating
+			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);		
 			
-
-
-
-
-			//DObject->scale(0.003);
-
-			DObject->setUseTexture(true);
-			//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
-			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
 			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
 			break;
 
@@ -537,10 +523,8 @@ int main(int argc, char* argv[]){
 			//DObject->scale(0.8);
 			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
 
-			DObject->setUseTexture(true);
-			//DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
-			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);
+					
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/Kalimba.mp3"),0,0,0);
 			break;
 
 		case 2:	// rock,	granite
@@ -553,12 +537,9 @@ int main(int argc, char* argv[]){
 
 			// scaling & rotating
 			//DObject->scale(0.3);
-			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
-
-			DObject->setUseTexture(true);
-			//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
-			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);
+			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));		
+		
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/Maid with the Flaxen Hair.mp3"),0,0,0);
 			break;
 
 		case 3:	// sponge
@@ -576,17 +557,14 @@ int main(int argc, char* argv[]){
 			//DObject->setMaterial(sponge_mat, true);
 			// scaling & rotating
 			//DObject->scale(0.1);
-			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
-
-			DObject->setUseTexture(true);
-			//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
-			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);
+			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));			
+			
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/Sleep Away.mp3"),0,0,0);
 			break;
 
 		case 4:	// rock, sandstone		
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock_rough.obj"));
-
+			
 			// dyn_fric = 0.4, stat_fric = 0.51, stiff = 0.6
 			/*DObject->getChild(0)->m_material.setDynamicFriction(0.4);
 			DObject->getChild(0)->m_material.setStaticFriction(0.51);
@@ -600,19 +578,18 @@ int main(int argc, char* argv[]){
 
 			// DObject->setMaterial(rock_mat, true);
 			// scaling & rotating
-			//DObject->scale(0.3);
+			
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
-
-			DObject->setUseTexture(true);
-			//DObject->stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
-			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
+			
+			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);
 			break;
 
 			
 			//Cork doesn't work
-		/* case 5:	 // Cork
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/cork/cork.obj"));
-
+		 case 5:	 // Cork
+			
+			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Cork/cork.obj"));
+			
 			// dyn_fric = 0.5, stat_fric = 0.5, stiff = ??
 			DObject->getChild(0)->m_material.setDynamicFriction(0.5);
 			DObject->getChild(0)->m_material.setStaticFriction(0.5);
@@ -622,11 +599,9 @@ int main(int argc, char* argv[]){
 			DObject->scale(0.003);
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
 
-			DObject->setUseTexture(true);
-			// DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
-			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
+			DObject->setUseTexture(true);					
 			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
-			break;	 */	
+			break;	 	
 			
 			/* case 6:	// bottle
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/cork/cork.obj"));
@@ -706,13 +681,13 @@ int main(int argc, char* argv[]){
 			DObject->scale( 2.0 * tool->getWorkspaceRadius() / size);
 		}
 
-
-		DObject->setShowEnabled(false, true);
+		DObject->setUseTexture(true);
+		
 		//// compute a boundary box
 		DObject->computeBoundaryBox(true);
 		// compute collision detection algorithm		
 		DObject->createAABBCollisionDetector(1.01 * proxyRadius, true, false);
-
+		DObject->setShowEnabled(false, true);
 	
 		
 		//DObject->InitStream();
@@ -726,7 +701,7 @@ int main(int argc, char* argv[]){
 		//TODO Ghost objects
 
 	}
-	for(int NP=0;NP<6;NP++){
+	for(int NP=0;NP<4;NP++){
 		cout << Objects[NP]->m_tag <<endl;
 	}
 	// create a new mesh.
@@ -861,7 +836,7 @@ void keySelect(unsigned char key, int x, int y){
 			for(int l=0;l<Objects.size();l++){
 				Objects[l]->setShowEnabled(false,true);
 			}
-			Objects[3]->setShowEnabled(true,true);
+			Objects[3]->setShowEnabled(true,true);			
 			break;
 
 		case '4':
@@ -985,29 +960,17 @@ void updateHaptics(void)
 	// CH lab
 	tool->setShowEnabled(true, true);
 
-	// set the static and dynamic friction coefficients for the object (propagating 
-	// them to the children)
-	/*for(unsigned int i = 0; i < DObject->getNumChildren(); i++)
-	{*/
-	//ch_setFrictionCoefficients(Objects.at(1), static_coeff, dynamic_coeff);		--BUUUUUG
-	//}
 
-	// warum??????????????????????????????????????????????????????????????????
-	// set the static and dynamic friction coefficients
-	static_coeff = 0.5;
-	dynamic_coeff = 0.3;
-	Objects.at(1)->m_material.setDynamicFriction(dynamic_coeff);
-	Objects.at(1)->m_material.setStaticFriction(static_coeff);
 
-	// CH lab
+
+
 	// turn off friction (the original Chai3d friction implementation!)
 	tool->m_proxyPointForceModel->m_useFriction = false;
 
 	// main haptic simulation loop
 	while(simulationRunning)
 	{
-		//BASS_ChannelSetAttribute(stream[0], BASS_ATTRIB_FREQ, (int)(infoBass[0].freq));
-		//BASS_ChannelPlay(stream[0],FALSE);
+		
 		// update position and orientation of tool
 		tool->updatePose();			
 		// compute interaction forces
@@ -1026,16 +989,17 @@ void updateHaptics(void)
 		//TODO Change to for Loop if Hstream member keeps empty
 		if(ContObject!=NULL){
 			if (tool->isInContact(ContObject)){		
-				LastID=GObject->getParent()->m_tag;
-				//StartPlayback(ContObject);				
-				BASS_ChannelPlay(Objects[LastID]->finalStream[0],FALSE==0);
+				LastID=GObject->getParent()->m_tag;					
+				//BASS_ChannelPlay(Objects[LastID]->finalStream[0],FALSE==0);
+				if(LastID>=0) ChangeSound(LastID);
 				cout << GObject->getParent()->m_tag <<endl;
-				//cout << GObject->getParent()-> <<endl;
+				
 				
 			}
 		}
-		else BASS_ChannelStop(Objects[LastID]->finalStream[0]);
-
+		else{
+			if(LastID>=0) BASS_ChannelStop(Objects[LastID]->finalStream[0]);
+		}
 		button = tool->getUserSwitch(0);
 		if(button==0)	newButPush=true;
 		//std::cout<<"Dist"<<tool->getDeviceGlobalPos()<<std::endl ;
@@ -1127,7 +1091,7 @@ void selectSolution(void){
 			el=rand() % list.size();
 
 			multChoice[i]=list.at(el);
-			std::cout <<"El:" << multChoice[i];
+			//std::cout <<"El:" << multChoice[i];
 			list.erase(list.begin()+el);
 		}
 		multChoice[2]=realModel;
@@ -1142,9 +1106,9 @@ void selectSolution(void){
 			multChoice[swap]=buf1;
 		}
 
-		Objects[multChoice[0]]->setPos(0.0, -1.5, 0.0);
+		Objects[multChoice[0]]->setPos(0.0, -2, 0.0);
 		Objects[multChoice[1]]->setPos(0.0, 0.0, 0.0);
-		Objects[multChoice[2]]->setPos(0.0, 1.5, 0.0);	
+		Objects[multChoice[2]]->setPos(0.0, 2, 0.0);	
 
 		for(int k=0;k<3;k++){
 			Objects[multChoice[k]]->setShowEnabled(true,true);	
@@ -1153,7 +1117,7 @@ void selectSolution(void){
 			Objects[multChoice[k]]->setBoxColor(cColorf(1,0,0,1));
 			distToObj[k] = Objects[multChoice[k]]->getBoundaryMax().distance(Objects[multChoice[k]]->getBoundaryCenter());
 		}
-		camera->set( cVector3d (7.0, 0.0, 0.0),    // camera position (eye)
+		camera->set( cVector3d (9.0, 0.0, 0.0),    // camera position (eye)
 			cVector3d (0.0, 0.0, 0.0),    // lookat position (target)
 			cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
 		checkBoxColl=true;
@@ -1234,23 +1198,33 @@ void StartPlayback(cMesh* Obj){
 
 //---------------------------------------------------------------------------
 
-void ChangeSound(cMesh* Obj, double depth, double velocity){
+void ChangeSound(int ID){
 	// doku: http://www.bass.radio42.com/help/html/f00d6245-b20b-f37d-7982-8cc6549f4ae3.htm
 	// http://www.bass.radio42.com/help/html/937729d8-fb7a-497d-a1d5-951f42873d58.htm
 	
-	// define maximum depth and maximum volume for material
-	//static const depth_max = 10;
-	//static const max_vol_material;
+	//define maximum depth and maximum volume for material
+	/*static const depth_max = 10;
+	static const max_vol_material;*/
+	int freq; //0-4
+	cVector3d frequency;
+	cVector3d force;
+
+	force= tool->m_lastComputedGlobalForce;
+	//cout <<"Force: " <<force;
 	//// calculate output volume
 	//if (depth < depth_max) {volume = (depth/depth_max) * max_vol_material;}
 	//else {colume = max_vol_material;}
-	//// apply volume
+	// apply volume
 	//BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_MUSIC_VOL_CHAN, volume); // range 0 - 1
-	//BASS_ChannelSetAttribute(Obj->stream[0], BBASS_ATTRIB_MUSIC_VOL_GLOBAL, volume);
-	//
-	//frequency = log2(velocity)
+	//BASS_ChannelSetAttribute(Obj->stream[freq], BBASS_ATTRIB_MUSIC_VOL_GLOBAL, volume);
+	
+	frequency = tool->m_deviceGlobalVel;
+	/*if(frequency<=5) freq=0;
+	else freq=1;*/
+	freq=0;
 
-	//BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_FREQ, frequency);
+	//BASS_ChannelSetAttribute(Objects[ID]->finalStream[freq], BASS_ATTRIB_FREQ, frequency);
+	BASS_ChannelPlay(Objects[ID]->finalStream[freq],FALSE);
 }
 
 //---------------------------------------------------------------------------
