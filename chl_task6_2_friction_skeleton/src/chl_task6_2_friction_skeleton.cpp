@@ -41,7 +41,7 @@ last revision: 07.06.2010*/
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-// DECLARED CONSTANTS
+//							DECLARED CONSTANTS
 //---------------------------------------------------------------------------
 
 // initial size (width/height) in pixels of the display window
@@ -55,7 +55,7 @@ const int OPTION_WINDOWDISPLAY  = 2;
 using namespace std;
 
 //---------------------------------------------------------------------------
-// DECLARED VARIABLES
+//							DECLARED VARIABLES
 //---------------------------------------------------------------------------
 
 // a world that contains all objects of the virtual environment
@@ -104,7 +104,6 @@ int aktObj=0;
 //Set number of Objects
 int NumObj=6;
 
-
 int multChoice[3];
 static int button;
 int realModel;
@@ -140,41 +139,28 @@ string resourceRoot;
 bool simulationFinished = false;
 
 
-/////////////////////////////////////////////////////////////////////////////////////
-//								AUDIO								   //
-/////////////////////////////////////////////////////////////////////////////////////
 
-//DWORD MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
-//void InitStream();
+//////////////////////////////////////////////////////////////////////////////////////
+//									AUDIO											//
+//////////////////////////////////////////////////////////////////////////////////////
 
-
-// Global variables for the audio stream
+string texture, t_ctr, t_path;
+long double t_val;
+int freq; //0-4
+cVector3d frequency;
+cVector3d force;
 static const int numStreams=5;
-//HSTREAM file_stream[numStreams];
-//HSTREAM stream[numStreams];
-//QWORD stream_length[numStreams];
-//BASS_CHANNELINFO infoBass[numStreams];
-//char *data[numStreams];
-
-
 int LastID;
-// Write the requested data from the loaded buffer to the sound card
-//DWORD CALLBACK MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
 void StartPlayback(cMesh* Obj);
 
-
-
-
-
 //---------------------------------------------------------------------------
-// DECLARED MACROS
+//							DECLARED MACROS
 //---------------------------------------------------------------------------
 // convert to resource path
 #define RESOURCE_PATH(p)    (char*)((resourceRoot+string(p)).c_str())
 
-
 //---------------------------------------------------------------------------
-// DECLARED FUNCTIONS
+//							DECLARED FUNCTIONS
 //---------------------------------------------------------------------------
 
 // callback when the window display is resized
@@ -214,7 +200,7 @@ void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff,
 void ChangeSound(int ID);
 
 // load all five sound files of specific texture
-void load_soundfiles(std::string texture);
+void load_soundfiles(cMesh *DObject ,string texture);
 
 //===========================================================================
 /*
@@ -234,16 +220,25 @@ The interaction forces are then computed and sent to the device.
 int main(int argc, char* argv[]){
 
 	//-----------------------------------------------------------------------
-	// INITIALIZATION
+	//								INITIALIZATION
 	//-----------------------------------------------------------------------
 
-	printf ("\n");
+	/*printf ("\n");
 	printf ("-----------------------------------\n");
 	printf ("CHAI 3D\n");
 	printf ("Demo: CHL friction rendering\n");
 	printf ("Copyright 2003-2009\n");
 	printf ("-----------------------------------\n");
-	printf ("\n\n");
+	printf ("\n\n");*/
+	printf ("\n");
+	printf ("Computational Haptics Lab SOSE 2015 - Final Project \n");
+	printf ("by Marc Dreiser and Julian Eiler\n\n");
+	printf ("###################################################################### \n");
+	printf ("###################################################################### \n");
+	printf ("#################### Haptic Model Detect Quizgame #################### \n");
+	printf ("###################################################################### \n");
+	printf ("###################################################################### \n");
+	printf ("\n");
 	printf ("Instructions:\n\n");
 	printf ("- Use haptic device and user switch to feel the shape \n");
 	printf ("  and guess the object. \n");
@@ -257,12 +252,10 @@ int main(int argc, char* argv[]){
 	// parse first arg to try and locate resources
 	resourceRoot = string(argv[0]).substr(0,string(argv[0]).find_last_of("/\\")+1);
 
-
-
 	srand (time(NULL));
 
 	//-----------------------------------------------------------------------
-	// 3D - SCENEGRAPH
+	//							3D - SCENEGRAPH
 	//-----------------------------------------------------------------------
 
 	// create a new world.
@@ -275,8 +268,6 @@ int main(int argc, char* argv[]){
 	// create a camera and insert it into the virtual world
 	camera = new cCamera(world);
 	world->addChild(camera);
-
-	
 
 	// position and oriente the camera
 	camera->set( cVector3d (3.0, 0.0, 0.0),    // camera position (eye)
@@ -299,7 +290,7 @@ int main(int argc, char* argv[]){
 
 
 	//-----------------------------------------------------------------------
-	// 2D - WIDGETS
+	//								2D - WIDGETS
 	//-----------------------------------------------------------------------
 
 	// create a 2D bitmap logo
@@ -309,14 +300,7 @@ int main(int argc, char* argv[]){
 	camera->m_front_2Dscene.addChild(logo);
 
 	// load a "chai3d" bitmap image file
-	bool fileload;
-	fileload = logo->m_image.loadFromFile(RESOURCE_PATH("resources/images/chai3d.bmp"));
-	if (!fileload)
-	{
-#if defined(_MSVC)
-		fileload = logo->m_image.loadFromFile("../../../bin/resources/images/chai3d.bmp");
-#endif
-	}
+	bool fileload = logo->m_image.loadFromFile(RESOURCE_PATH("resources/images/chai3d.bmp"));
 
 	// position the logo at the bottom left of the screen (pixel coordinates)
 	logo->setPos(10, 10, 0);
@@ -335,7 +319,6 @@ int main(int argc, char* argv[]){
 	// enable transparency
 	logo->enableTransparency(true);
 
-
 	camera->m_front_2Dscene.addChild(&CounterI);
 	camera->m_front_2Dscene.addChild(&CounterC);
 
@@ -347,9 +330,8 @@ int main(int argc, char* argv[]){
 	
 	redrawUI();
 	
-
 	//-----------------------------------------------------------------------
-	// HAPTIC DEVICES / TOOLS
+	//						HAPTIC DEVICES / TOOLS
 	//-----------------------------------------------------------------------
 
 	// create a haptic device handler
@@ -360,10 +342,7 @@ int main(int argc, char* argv[]){
 	handler->getDevice(hapticDevice, 0);
 
 	// retrieve information about the current haptic device
-	if (hapticDevice)
-	{
-		info = hapticDevice->getSpecifications();
-	}
+	if (hapticDevice){info = hapticDevice->getSpecifications();}
 
 	// create a 3D tool and add it to the world
 	tool = new cGeneric3dofPointer(world);
@@ -411,94 +390,15 @@ int main(int argc, char* argv[]){
 	// Initialize sound device and create audio stream
 	BASS_Init(1,44100,0,0,NULL);
 
-	//Load Sound Files
-	//// Load the data from the specified file
-	//   HSTREAM file_stream = 1;
-	//   file_stream = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
-
-	//HSTREAM file_stream_mat[NBR_TEXTURES][NBR_VELOCITIES] = {1,1,1,1,1};
-	//file_stream_mat[0][0] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
-	//file_stream_mat[0][1] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/lion.wav"),0,0,BASS_STREAM_DECODE);
-	//file_stream_mat[0][2] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/bird.wav"),0,0,BASS_STREAM_DECODE);
-	//file_stream_mat[0][3] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/cow.wav"),0,0,BASS_STREAM_DECODE);
-	//file_stream_mat[0][4] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/duck.wav"),0,0,BASS_STREAM_DECODE);
-
-	//if (file_stream_mat[0][0] == 0)
-	//{
-	//	#if defined(_msvc)
-	//	file_stream_mat[0][0] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/horse.wav"),0,0,bass_stream_decode);
-	//	file_stream_mat[0][1] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/lion.wav"),0,0,bass_stream_decode);
-	//	file_stream_mat[0][2] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/bird.wav"),0,0,bass_stream_decode);
-	//	file_stream_mat[0][3] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/cow.wav"),0,0,bass_stream_decode);
-	//	file_stream_mat[0][4] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/duck.wav"),0,0,bass_stream_decode);
-	//	//file_stream = bass_streamcreatefile(false,"../../../bin/resources/sounds/classic.mp3",0,0,bass_stream_decode);
-	//	#endif
-	//}
-	//if (!fileload)
-	//{
-	//       printf("error - mp3 audio file failed to load correctly.\n");
-	//       close();
-	//       return (-1);
-	//   }
-
-
-	/////////////////////////////////////////////////////////////////////////////////////
-	//								bla bla bla										   //
-	/////////////////////////////////////////////////////////////////////////////////////
-	//for( int text = 0; text < NBR_TEXTURES; text = text + 1 ){	
-	//	for( int veloc = 0; veloc < NBR_VELOCITIES; veloc = veloc + 1 ){
-	//		stream_length_mat[text][veloc] = BASS_ChannelGetLength(file_stream_mat[text][veloc], 0);
-	//		BASS_ChannelGetInfo(file_stream_mat[text][veloc], &infoBass_mat[text][veloc]);
-	//		data_mat[text][veloc] = new char[(unsigned int)stream_length_mat[text][veloc]];
-	//		BASS_ChannelGetData(file_stream_mat[text][veloc], data_mat[text][veloc], (unsigned int)stream_length_mat[text][veloc]);
-	//		
-	//		/*data = data_mat[text][veloc];
-	//		stream_length = stream_length_mat[text][veloc];*/
-
-	//		stream_mat[text][veloc] = BASS_StreamCreate(infoBass_mat[text][veloc].freq, infoBass_mat[text][veloc].chans, 0, &MyStreamWriter, 0);
-	//		std::cout << "stream: " << stream_mat[text][veloc] << std::endl;
-	//		std::cout << "data_mat:  " << sizeof(*data_mat[text][veloc]) <<"|| stream_length:  " << stream_length_mat[text][veloc] << std::endl;
-	//	}
-	//}
-
-
-
-
-
-
 	//-----------------------------------------------------------------------
-	// COMPOSE THE VIRTUAL SCENE
+	//					 COMPOSE THE VIRTUAL SCENE
 	//-----------------------------------------------------------------------
-
-	// create a virtual mesh
-
-	//Objects = new cMesh(world)[5];
 
 	//Materials
 	cMaterial mat;
 	mat.m_ambient.set(0.5, 0.5, 0.5);
 	mat.m_diffuse.set(0.8, 0.8, 0.8);
 	mat.m_specular.set(1.0, 1.0, 1.0);
-
-
-	//cMaterial tooth_mat;
-	//tooth_mat.m_ambient.set(0.5, 0.5, 0.5);		
-	//tooth_mat.m_specular.set(1.0, 1.0, 1.0);
-	//tooth_mat.setStiffness(0.8*stiffnessMax); //MaxStiffness:74, Max Force:4;
-	//tooth_mat.setDynamicFriction(0.2);
-	//tooth_mat.setStaticFriction(0.15);
-
-
-	//cMaterial rock_mat;
-	//rock_mat.m_ambient.set(0.5, 0.5, 0.5);
-	////rock_mat.m_diffuse.set(0.1, 0.8, 0.8);
-	//rock_mat.m_specular.set(1.0, 1.0, 1.0);
-	//rock_mat.setStiffness(0.8*stiffnessMax); //MaxStiffness:74, Max Force:4;
-	//rock_mat.setDynamicFriction(0.45);
-	//rock_mat.setStaticFriction(0.4);
-
-
-
 
 	// switch chooses the correct object and sets the attributes of the object
 	// 1) load object
@@ -508,18 +408,15 @@ int main(int argc, char* argv[]){
 	// 5) load sound files
 	for(int it=0;it<NumObj;it++){
 		cMesh *DObject = new cMesh(world);
-		//DObject=new cMesh(world);
+
 		// add object to world
 		world->addChild(DObject);
 
 		// set the position and orientation of the object 
 		DObject->setPos(0.0, 0.0, 0.0);
-		//DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(-10));
-		//DObject->rotate(cVector3d(0.0, 1.0, 0.0), cDegToRad(10));
 		DObject->setTag(it);
-		fileload = false;
-		// load an object file
-		switch(it){
+
+		switch(it){ // set object specific properties
 
 		case 0: // tooth			
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/tooth/tooth.3ds"));
@@ -529,13 +426,9 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStaticFriction(0.15);
 			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);		
 			
-			texture = Glass;
-			for(int sf=0;sf<5;sf++){DObject->finalStream[sf]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/" + texture + "/f" + (sf+1)),0,0,0);}
-			/*DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f1"),0,0,0);
-			DObject->finalStream[1]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f2"),0,0,0);
-			DObject->finalStream[2]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f3"),0,0,0);
-			DObject->finalStream[3]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f4"),0,0,0);
-			DObject->finalStream[4]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f5"),0,0,0);*/
+			// load soundfiles
+			texture = "Glass";
+			load_soundfiles(DObject, texture);
 			break;
 
 		case 1: // bunny
@@ -546,13 +439,11 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStaticFriction(0.4);
 			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
 
-			//DObject->setMaterial(tooth_mat, true);
-			// scaling & rotating
-			//DObject->scale(0.8);
 			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
 
-					
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/Kalimba.mp3"),0,0,0);
+			// load soundfiles
+			texture = "Cashmere";
+			load_soundfiles(DObject, texture);
 			break;
 
 		case 2:	// rock,	granite
@@ -564,10 +455,11 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStiffness(0.6*stiffnessMax);
 
 			// scaling & rotating
-			//DObject->scale(0.3);
 			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));		
 		
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/Maid with the Flaxen Hair.mp3"),0,0,0);
+			// load soundfiles
+			texture = "stone_tile";
+			load_soundfiles(DObject, texture);
 			break;
 
 		case 3:	// sponge
@@ -582,38 +474,28 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStaticFriction(0.4);
 			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
 
-			//DObject->setMaterial(sponge_mat, true);
 			// scaling & rotating
-			//DObject->scale(0.1);
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));			
 			
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/Sleep Away.mp3"),0,0,0);
+			texture = "Foam_medium";
+			load_soundfiles(DObject, texture);
 			break;
 
 		case 4:	// rock, sandstone		
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock_rough.obj"));
 			
 			// dyn_fric = 0.4, stat_fric = 0.51, stiff = 0.6
-			/*DObject->getChild(0)->m_material.setDynamicFriction(0.4);
-			DObject->getChild(0)->m_material.setStaticFriction(0.51);
-			DObject->getChild(0)->m_material.setStiffness(0.6*stiffnessMax);*/
-
-
 			DObject->m_material.setDynamicFriction(0.4);
 			DObject->m_material.setStaticFriction(0.51);
 			DObject->m_material.setStiffness(0.6*stiffnessMax);
 			
-
-			// DObject->setMaterial(rock_mat, true);
 			// scaling & rotating
-			
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
 			
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);
+			texture = "stone_tile";
+			load_soundfiles(DObject, texture);
 			break;
 
-			
-			//Cork doesn't work
 		 case 5:	 // Cork
 			
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Cork/cork.obj"));
@@ -624,11 +506,10 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
 
 			// scaling & rotating
-			DObject->scale(0.003);
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
 
-			DObject->setUseTexture(true);					
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
+			texture = "Cork";
+			load_soundfiles(DObject, texture);
 			break;	 	
 			
 			/* case 6:	// bottle
@@ -716,13 +597,6 @@ int main(int argc, char* argv[]){
 		// compute collision detection algorithm		
 		DObject->createAABBCollisionDetector(1.01 * proxyRadius, true, false);
 		DObject->setShowEnabled(false, true);
-	
-		
-		//DObject->InitStream();
-		//InitStream();
-		//DObject->finalStream[0]=stream[0];
-		//BASS_ChannelPlay(DObject->finalStream[0],FALSE);
-
 
 		Objects.push_back(DObject);	
 
@@ -730,7 +604,7 @@ int main(int argc, char* argv[]){
 
 	}
 	for(int NP=0;NP<4;NP++){
-		cout << Objects[NP]->m_tag <<endl;
+		cout<< "dada" << Objects[NP]->m_tag <<endl;
 	}
 	// create a new mesh.
 	drill = new cMesh(world);
@@ -767,7 +641,7 @@ int main(int argc, char* argv[]){
 
 
 	//-----------------------------------------------------------------------
-	// OPEN GL - WINDOW DISPLAY
+	//					OPEN GL - WINDOW DISPLAY
 	//-----------------------------------------------------------------------
 
 	// initialize GLUT
@@ -799,7 +673,7 @@ int main(int argc, char* argv[]){
 
 
 	//-----------------------------------------------------------------------
-	// START SIMULATION
+	//						START SIMULATION
 	//-----------------------------------------------------------------------
 
 	// simulation in now running
@@ -993,10 +867,6 @@ void updateHaptics(void)
 	// CH lab
 	tool->setShowEnabled(true, true);
 
-
-
-
-
 	// turn off friction (the original Chai3d friction implementation!)
 	tool->m_proxyPointForceModel->m_useFriction = false;
 
@@ -1025,7 +895,7 @@ void updateHaptics(void)
 				LastID=GObject->getParent()->m_tag;					
 				//BASS_ChannelPlay(Objects[LastID]->finalStream[0],FALSE==0);
 				if(LastID>=0) ChangeSound(LastID);
-				cout << GObject->getParent()->m_tag <<endl;
+				// cout << "nervt" << GObject->getParent()->m_tag <<endl;
 				
 				
 			}
@@ -1232,21 +1102,6 @@ void checkSolution(void){
 
 //---------------------------------------------------------------------------
 
-void StartPlayback(cMesh* Obj){	
-
-
-	//BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_FREQ, 500);
-  
-	//cout<< Obj->finalStream[0];
-	//BASS_ChannelPlay(Obj->finalStream[0],FALSE);
-	//cout << BASS_ChannelPlay(file_stream[0],FALSE);
-	//BASS_ChannelPlay(Obj->getParent()->,FALSE);
-	
-	cout <<BASS_ErrorGetCode();
-}
-
-//---------------------------------------------------------------------------
-
 void ChangeSound(int ID){
 	// doku: http://www.bass.radio42.com/help/html/f00d6245-b20b-f37d-7982-8cc6549f4ae3.htm
 	// http://www.bass.radio42.com/help/html/937729d8-fb7a-497d-a1d5-951f42873d58.htm
@@ -1278,9 +1133,14 @@ void ChangeSound(int ID){
 
 //---------------------------------------------------------------------------
 
-//void load_soundfiles(std::string texture){
-//	
-//}
+void load_soundfiles(cMesh *DObject ,string texture){
+	for(int sf=0;sf<5;sf++){
+		t_val = sf + 1;
+		t_ctr = std::to_string(t_val);
+		t_path = "resources/sounds/oneSec/" + texture + "/f" + t_ctr + ".wav";
+		DObject->finalStream[sf]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH(t_path),0,0,0);
+	}
+}
 
 //---------------------------------------------------------------------------
 
@@ -1369,4 +1229,99 @@ void ChangeSound(int ID){
 //	 }
 //
 //	 return 0;
+//}
+
+
+// sound bullsch
+//Load Sound Files
+	//// Load the data from the specified file
+	//   HSTREAM file_stream = 1;
+	//   file_stream = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);
+
+	//HSTREAM file_stream_mat[NBR_TEXTURES][NBR_VELOCITIES] = {1,1,1,1,1};
+	//file_stream_mat[0][0] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/horse.wav"),0,0,BASS_STREAM_DECODE);
+	//file_stream_mat[0][1] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/lion.wav"),0,0,BASS_STREAM_DECODE);
+	//file_stream_mat[0][2] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/bird.wav"),0,0,BASS_STREAM_DECODE);
+	//file_stream_mat[0][3] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/cow.wav"),0,0,BASS_STREAM_DECODE);
+	//file_stream_mat[0][4] = BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/s1/duck.wav"),0,0,BASS_STREAM_DECODE);
+
+	//if (file_stream_mat[0][0] == 0)
+	//{
+	//	#if defined(_msvc)
+	//	file_stream_mat[0][0] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/horse.wav"),0,0,bass_stream_decode);
+	//	file_stream_mat[0][1] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/lion.wav"),0,0,bass_stream_decode);
+	//	file_stream_mat[0][2] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/bird.wav"),0,0,bass_stream_decode);
+	//	file_stream_mat[0][3] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/cow.wav"),0,0,bass_stream_decode);
+	//	file_stream_mat[0][4] =  bass_streamcreatefile(false,"../../../bin/resources/sounds/s1/duck.wav"),0,0,bass_stream_decode);
+	//	//file_stream = bass_streamcreatefile(false,"../../../bin/resources/sounds/classic.mp3",0,0,bass_stream_decode);
+	//	#endif
+	//}
+	//if (!fileload)
+	//{
+	//       printf("error - mp3 audio file failed to load correctly.\n");
+	//       close();
+	//       return (-1);
+	//   }
+
+
+	/////////////////////////////////////////////////////////////////////////////////////
+	//								bla bla bla										   //
+	/////////////////////////////////////////////////////////////////////////////////////
+	//for( int text = 0; text < NBR_TEXTURES; text = text + 1 ){	
+	//	for( int veloc = 0; veloc < NBR_VELOCITIES; veloc = veloc + 1 ){
+	//		stream_length_mat[text][veloc] = BASS_ChannelGetLength(file_stream_mat[text][veloc], 0);
+	//		BASS_ChannelGetInfo(file_stream_mat[text][veloc], &infoBass_mat[text][veloc]);
+	//		data_mat[text][veloc] = new char[(unsigned int)stream_length_mat[text][veloc]];
+	//		BASS_ChannelGetData(file_stream_mat[text][veloc], data_mat[text][veloc], (unsigned int)stream_length_mat[text][veloc]);
+	//		
+	//		/*data = data_mat[text][veloc];
+	//		stream_length = stream_length_mat[text][veloc];*/
+
+	//		stream_mat[text][veloc] = BASS_StreamCreate(infoBass_mat[text][veloc].freq, infoBass_mat[text][veloc].chans, 0, &MyStreamWriter, 0);
+	//		std::cout << "stream: " << stream_mat[text][veloc] << std::endl;
+	//		std::cout << "data_mat:  " << sizeof(*data_mat[text][veloc]) <<"|| stream_length:  " << stream_length_mat[text][veloc] << std::endl;
+	//	}
+	//}
+
+		
+		//DObject->InitStream();
+		//InitStream();
+		//DObject->finalStream[0]=stream[0];
+		//BASS_ChannelPlay(DObject->finalStream[0],FALSE);
+
+// material bullsch
+
+
+	//cMaterial tooth_mat;
+	//tooth_mat.m_ambient.set(0.5, 0.5, 0.5);		
+	//tooth_mat.m_specular.set(1.0, 1.0, 1.0);
+	//tooth_mat.setStiffness(0.8*stiffnessMax); //MaxStiffness:74, Max Force:4;
+	//tooth_mat.setDynamicFriction(0.2);
+	//tooth_mat.setStaticFriction(0.15);
+
+
+	//cMaterial rock_mat;
+	//rock_mat.m_ambient.set(0.5, 0.5, 0.5);
+	////rock_mat.m_diffuse.set(0.1, 0.8, 0.8);
+	//rock_mat.m_specular.set(1.0, 1.0, 1.0);
+	//rock_mat.setStiffness(0.8*stiffnessMax); //MaxStiffness:74, Max Force:4;
+	//rock_mat.setDynamicFriction(0.45);
+	//rock_mat.setStaticFriction(0.4);
+
+
+// bullsch function
+
+//---------------------------------------------------------------------------
+
+//void StartPlayback(cMesh* Obj){	
+//
+//
+//	//BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_FREQ, 500);
+//  
+//	//cout<< Obj->finalStream[0];
+//	//BASS_ChannelPlay(Obj->finalStream[0],FALSE);
+//	//cout << BASS_ChannelPlay(file_stream[0],FALSE);
+//	//BASS_ChannelPlay(Obj->getParent()->,FALSE);
+//	
+//	cout << "warsch" << BASS_ErrorGetCode();
 //}
