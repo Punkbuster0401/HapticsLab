@@ -74,6 +74,13 @@ cBitmap* logo;
 int displayW  = 0;
 int displayH  = 0;
 
+//UI
+cLabel CounterI;
+cLabel CounterC;
+_Longlong inc=0;
+_Longlong cor=0;
+
+void redrawUI();
 // a haptic device handler
 cHapticDeviceHandler* handler;
 
@@ -237,8 +244,8 @@ int main(int argc, char* argv[]){
 	printf ("-----------------------------------\n");
 	printf ("\n\n");
 	printf ("Instructions:\n\n");
-	printf ("- Use haptic device and user switch to rotate \n");
-	printf ("  rotate and translate DObject. \n");
+	printf ("- Use haptic device and user switch to feel the shape \n");
+	printf ("  and guess the object. \n");
 	printf ("\n\n");
 	printf ("Keyboard Options:\n\n");
 	printf ("[1-5] - Model 1-N \n");	
@@ -267,6 +274,8 @@ int main(int argc, char* argv[]){
 	// create a camera and insert it into the virtual world
 	camera = new cCamera(world);
 	world->addChild(camera);
+
+	
 
 	// position and oriente the camera
 	camera->set( cVector3d (3.0, 0.0, 0.0),    // camera position (eye)
@@ -325,6 +334,18 @@ int main(int argc, char* argv[]){
 	// enable transparency
 	logo->enableTransparency(true);
 
+
+	camera->m_front_2Dscene.addChild(&CounterI);
+	camera->m_front_2Dscene.addChild(&CounterC);
+
+	CounterI.m_fontColor=cColorf(1,0,0,1);
+	CounterC.m_fontColor=cColorf(0,1,0,1);
+
+	CounterI.setPos(500,590,0);	
+	CounterC.setPos(400,590,0);		
+	
+	redrawUI();
+	
 
 	//-----------------------------------------------------------------------
 	// HAPTIC DEVICES / TOOLS
@@ -799,11 +820,12 @@ void resizeWindow(int w, int h){
 	displayW = w;
 	displayH = h;
 	glViewport(0, 0, displayW, displayH);
+			
 }
 
 //---------------------------------------------------------------------------
 
-void keySelect(unsigned char key, int x, int y){
+void keySelect(unsigned char key, int x, int y){	
 	switch(key){
 		case 27:
 		case 'x':
@@ -911,11 +933,15 @@ void menuSelect(int value)
 		// enable full screen display
 	case OPTION_FULLSCREEN:
 		glutFullScreen();
+		CounterI.setPos(1530,990,0);	
+		CounterC.setPos(1430,990,0);
 		break;
 
 		// reshape window to original size
 	case OPTION_WINDOWDISPLAY:
 		glutReshapeWindow(WINDOW_SIZE_W, WINDOW_SIZE_H);
+		CounterI.setPos(500,590,0);	
+		CounterC.setPos(400,590,0);
 		break;
 	}
 }
@@ -1048,11 +1074,21 @@ void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff,
 	//}	
 }
 
+
+void redrawUI(){
+	
+	string Wrongs="INCORRECT: " + to_string(inc);
+	string Rights="CORRECT: " + to_string(cor);
+	CounterI.m_string=Wrongs;
+	CounterC.m_string=Rights;
+}
+
 //---------------------------------------------------------------------------
 
 void startGame(void){
 	curState=0;
 	checkBoxColl=false;
+	tool->setWorkspaceRadius(1.0);
 	for(int s=0;s<Objects.size();s++){
 		Objects[s]->setShowBox(false);
 		Objects[s]->setPos(0,0,0);
@@ -1120,6 +1156,7 @@ void selectSolution(void){
 		camera->set( cVector3d (9.0, 0.0, 0.0),    // camera position (eye)
 			cVector3d (0.0, 0.0, 0.0),    // lookat position (target)
 			cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
+		tool->setWorkspaceRadius(5.0);
 		checkBoxColl=true;
 		newButPush=false;
 	}
@@ -1164,12 +1201,17 @@ void checkSolution(void){
 		{
 			Objects[selectedModel]->setShowBox(true);
 			Objects[selectedModel]->setBoxColor(cColorf(0,1,0,1));
-			cout<<"RIGHT"<<endl;
+			cout<<"RIGHT"<<endl;			
+			cor++;
+			redrawUI();
+
 			cout <<"Press n for new Game"<<endl;			
 		}
 		else{
 			cout<<"WRONG"<<endl;
 			cout <<"Press n for new Game"<<endl;
+			inc++;
+			redrawUI();
 			Objects[selectedModel]->setShowBox(true);
 			Objects[realModel]->setShowBox(true);
 			Objects[selectedModel]->setBoxColor(cColorf(1,0,0,1));
