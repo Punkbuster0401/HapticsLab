@@ -1207,16 +1207,18 @@ void ChangeSound(cMesh* Obj, double depth, double velocity){
 	// http://www.bass.radio42.com/help/html/937729d8-fb7a-497d-a1d5-951f42873d58.htm
 	
 	// define maximum depth and maximum volume for material
-	static const depth_max = 10;
-	static const max_vol_material;
+	static const double depth_max = 10;
+	static const double max_vol_material;
+	int volume, frequency;
+	
 	// calculate output volume
 	if (depth < depth_max) {volume = (depth/depth_max) * max_vol_material;}
-	else {colume = max_vol_material;}
+	else {volume = max_vol_material;}
 	// apply volume
 	BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_MUSIC_VOL_CHAN, volume); // range 0 - 1
-	BASS_ChannelSetAttribute(Obj->stream[0], BBASS_ATTRIB_MUSIC_VOL_GLOBAL, volume);
+	BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_MUSIC_VOL_GLOBAL, volume);
 	
-	frequency = log2(velocity)
+	//frequency = log2(velocity)
 
 	BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_FREQ, frequency);
 }
