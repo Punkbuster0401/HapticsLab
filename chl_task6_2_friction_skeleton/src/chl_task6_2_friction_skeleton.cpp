@@ -152,7 +152,7 @@ BASS_CHANNELINFO infoBass[numStreams];
 char *data[numStreams];
 int record_direction=1 ;
 unsigned int pos=0;
-
+int LastID;
 // Write the requested data from the loaded buffer to the sound card
 //DWORD CALLBACK MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
 void StartPlayback(cMesh* Obj);
@@ -511,7 +511,12 @@ int main(int argc, char* argv[]){
 
 			//DObject->setMaterial(tooth_mat, true);
 			// scaling & rotating
-			DObject->scale(0.003);
+			
+
+
+
+
+			//DObject->scale(0.003);
 
 			DObject->setUseTexture(true);
 			//DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
@@ -529,7 +534,7 @@ int main(int argc, char* argv[]){
 
 			//DObject->setMaterial(tooth_mat, true);
 			// scaling & rotating
-			DObject->scale(0.8);
+			//DObject->scale(0.8);
 			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
 
 			DObject->setUseTexture(true);
@@ -547,7 +552,7 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStiffness(0.6*stiffnessMax);
 
 			// scaling & rotating
-			DObject->scale(0.3);
+			//DObject->scale(0.3);
 			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
 
 			DObject->setUseTexture(true);
@@ -570,7 +575,7 @@ int main(int argc, char* argv[]){
 
 			//DObject->setMaterial(sponge_mat, true);
 			// scaling & rotating
-			DObject->scale(0.1);
+			//DObject->scale(0.1);
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
 
 			DObject->setUseTexture(true);
@@ -583,13 +588,19 @@ int main(int argc, char* argv[]){
 			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock_rough.obj"));
 
 			// dyn_fric = 0.4, stat_fric = 0.51, stiff = 0.6
-			DObject->getChild(0)->m_material.setDynamicFriction(0.4);
+			/*DObject->getChild(0)->m_material.setDynamicFriction(0.4);
 			DObject->getChild(0)->m_material.setStaticFriction(0.51);
-			DObject->getChild(0)->m_material.setStiffness(0.6*stiffnessMax);
+			DObject->getChild(0)->m_material.setStiffness(0.6*stiffnessMax);*/
+
+
+			DObject->m_material.setDynamicFriction(0.4);
+			DObject->m_material.setStaticFriction(0.51);
+			DObject->m_material.setStiffness(0.6*stiffnessMax);
+			
 
 			// DObject->setMaterial(rock_mat, true);
 			// scaling & rotating
-			DObject->scale(0.3);
+			//DObject->scale(0.3);
 			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
 
 			DObject->setUseTexture(true);
@@ -686,6 +697,15 @@ int main(int argc, char* argv[]){
 		// 5) compute boundary box
 		// 6) create collision detector
 		// 8) intialize stream
+			// get dimensions of object
+		double size = cSub(DObject->getBoundaryMax(), DObject->getBoundaryMin()).length();
+
+		// resize object to screen
+		if (size > 0)
+		{
+			DObject->scale( 2.0 * tool->getWorkspaceRadius() / size);
+		}
+
 
 		DObject->setShowEnabled(false, true);
 		//// compute a boundary box
@@ -693,6 +713,8 @@ int main(int argc, char* argv[]){
 		// compute collision detection algorithm		
 		DObject->createAABBCollisionDetector(1.01 * proxyRadius, true, false);
 
+	
+		
 		//DObject->InitStream();
 		//InitStream();
 		//DObject->finalStream[0]=stream[0];
@@ -704,7 +726,9 @@ int main(int argc, char* argv[]){
 		//TODO Ghost objects
 
 	}
-
+	for(int NP=0;NP<6;NP++){
+		cout << Objects[NP]->m_tag <<endl;
+	}
 	// create a new mesh.
 	drill = new cMesh(world);
 
@@ -854,7 +878,7 @@ void keySelect(unsigned char key, int x, int y){
 			Objects[5]->setShowEnabled(true,true);
 			break;
 
-		case '-'
+		case '-':
 			//	// decrease transparency level
 			//	transparencyLevel = transparencyLevel - 0.1;
 			//	if (transparencyLevel < 0.0) { transparencyLevel = 0.0; }
@@ -997,14 +1021,20 @@ void updateHaptics(void)
 		//Sound
 		// check if the tool is touching an object
 		cMesh* ContObject = (cMesh*)tool->m_proxyPointForceModel->m_contactPoint0->m_object;
-		//cGenericObject* GObject = tool->m_proxyPointForceModel->m_contactPoint0->m_object; 
+		cGenericObject* GObject = tool->m_proxyPointForceModel->m_contactPoint0->m_object; 
+		
 		//TODO Change to for Loop if Hstream member keeps empty
 		if(ContObject!=NULL){
-			if (tool->isInContact(ContObject)){		 
-				StartPlayback(ContObject);
+			if (tool->isInContact(ContObject)){		
+				LastID=GObject->getParent()->m_tag;
+				//StartPlayback(ContObject);				
+				BASS_ChannelPlay(Objects[LastID]->finalStream[0],FALSE==0);
+				cout << GObject->getParent()->m_tag <<endl;
+				//cout << GObject->getParent()-> <<endl;
+				
 			}
 		}
-		else BASS_ChannelStop(stream[0]);
+		else BASS_ChannelStop(Objects[LastID]->finalStream[0]);
 
 		button = tool->getUserSwitch(0);
 		if(button==0)	newButPush=true;
@@ -1025,10 +1055,11 @@ void updateHaptics(void)
 		}
 
 
-
+		
 		// send forces to device
 		tool->applyForces();
-
+		tool->m_proxyPointForceModel->getForce();
+		
 		// compute global reference frames for each object
 		world->computeGlobalPositions(true);
 	}
@@ -1196,7 +1227,8 @@ void StartPlayback(cMesh* Obj){
 	//cout<< Obj->finalStream[0];
 	//BASS_ChannelPlay(Obj->finalStream[0],FALSE);
 	//cout << BASS_ChannelPlay(file_stream[0],FALSE);
-	//BASS_ChannelPlay(Obj->finalStream[0],FALSE);
+	//BASS_ChannelPlay(Obj->getParent()->,FALSE);
+	
 	cout <<BASS_ErrorGetCode();
 }
 
@@ -1207,18 +1239,18 @@ void ChangeSound(cMesh* Obj, double depth, double velocity){
 	// http://www.bass.radio42.com/help/html/937729d8-fb7a-497d-a1d5-951f42873d58.htm
 	
 	// define maximum depth and maximum volume for material
-	static const depth_max = 10;
-	static const max_vol_material;
-	// calculate output volume
-	if (depth < depth_max) {volume = (depth/depth_max) * max_vol_material;}
-	else {colume = max_vol_material;}
-	// apply volume
-	BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_MUSIC_VOL_CHAN, volume); // range 0 - 1
-	BASS_ChannelSetAttribute(Obj->stream[0], BBASS_ATTRIB_MUSIC_VOL_GLOBAL, volume);
-	
-	frequency = log2(velocity)
+	//static const depth_max = 10;
+	//static const max_vol_material;
+	//// calculate output volume
+	//if (depth < depth_max) {volume = (depth/depth_max) * max_vol_material;}
+	//else {colume = max_vol_material;}
+	//// apply volume
+	//BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_MUSIC_VOL_CHAN, volume); // range 0 - 1
+	//BASS_ChannelSetAttribute(Obj->stream[0], BBASS_ATTRIB_MUSIC_VOL_GLOBAL, volume);
+	//
+	//frequency = log2(velocity)
 
-	BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_FREQ, frequency);
+	//BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_FREQ, frequency);
 }
 
 //---------------------------------------------------------------------------
