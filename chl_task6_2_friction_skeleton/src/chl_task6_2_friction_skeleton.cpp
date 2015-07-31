@@ -143,8 +143,8 @@ bool simulationFinished = false;
 //////////////////////////////////////////////////////////////////////////////////////
 //									AUDIO											//
 //////////////////////////////////////////////////////////////////////////////////////
-
-string texture, t_ctr, t_path;
+bool fileload;
+string texture, t_ctr, t_path, f_obj;
 long double t_val;
 int freq; //0-4
 cVector3d frequency;
@@ -191,16 +191,17 @@ void checkSolution(void);
 double static_coeff;
 double dynamic_coeff;
 bool useFriction = true;
+double stiffnessMax;
 
 // set static and dynamic friction coefficients for the object, propagating 
 // them to the children
-void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff, const double& dynamic_coeff);
+void load_object(cMesh *DObject, string f_obj, string texture, double stat_fric, double dyn_fric, double stiffness, int numChild, cVector3d cvd = cVector3d(1.0, 0.0, 0.0));
 
 // modify sound according to user action
 void ChangeSound(int ID);
 
 // load all five sound files of specific texture
-void load_soundfiles(cMesh *DObject ,string texture);
+//void load_soundfiles(cMesh *DObject, string f_obj, string texture, double dyn_fric, double stat_fric, double stiffness);
 
 //===========================================================================
 /*
@@ -300,7 +301,7 @@ int main(int argc, char* argv[]){
 	camera->m_front_2Dscene.addChild(logo);
 
 	// load a "chai3d" bitmap image file
-	bool fileload = logo->m_image.loadFromFile(RESOURCE_PATH("resources/images/chai3d.bmp"));
+	fileload = logo->m_image.loadFromFile(RESOURCE_PATH("resources/images/chai3d.bmp"));
 
 	// position the logo at the bottom left of the screen (pixel coordinates)
 	logo->setPos(10, 10, 0);
@@ -384,7 +385,7 @@ int main(int argc, char* argv[]){
 	// define a maximum stiffness that can be handled by the current
 	// haptic device. The value is scaled to take into account the
 	// workspace scale factor
-	double stiffnessMax = info.m_maxForceStiffness / workspaceScaleFactor;
+	stiffnessMax = info.m_maxForceStiffness / workspaceScaleFactor;
 
 
 	// Initialize sound device and create audio stream
@@ -418,170 +419,61 @@ int main(int argc, char* argv[]){
 
 		switch(it){ // set object specific properties
 
-		case 0: // tooth			
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/tooth/tooth.3ds"));
-
-			// dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8
-			DObject->getChild(0)->m_material.setDynamicFriction(0.2);
-			DObject->getChild(0)->m_material.setStaticFriction(0.15);
-			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);		
-			
-			// load soundfiles
-			texture = "Glass";
-			load_soundfiles(DObject, texture);
+		case 0: // tooth
+			// load soundfiles, dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8
+			load_object(DObject, "tooth/tooth.3ds", "Glass", 0.15, 0.2, 0.8, 0, cVector3d(0.0, 0.0, 0.0));
 			break;
 
 		case 1: // bunny
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/bunny/bunny.obj"));
-
-			// dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
-			DObject->getChild(0)->m_material.setDynamicFriction(0.3);
-			DObject->getChild(0)->m_material.setStaticFriction(0.4);
-			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
-
-			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));
-
-			// load soundfiles
-			texture = "Cashmere";
-			load_soundfiles(DObject, texture);
+			// load soundfiles, dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
+			load_object(DObject, "bunny/bunny.obj", "Cashmere", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
 			break;
 
 		case 2:	// rock,	granite
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock1.obj"));
-
 			// dyn_fric = 0.3, stat_fric = 0.43, stiff = 0.6
-			DObject->getChild(0)->m_material.setDynamicFriction(0.3);
-			DObject->getChild(0)->m_material.setStaticFriction(0.43);
-			DObject->getChild(0)->m_material.setStiffness(0.6*stiffnessMax);
-
-			// scaling & rotating
-			DObject->rotate(cVector3d(1.0, 0.0, 0.0), cDegToRad(90));		
-		
-			// load soundfiles
-			texture = "stone_tile";
-			load_soundfiles(DObject, texture);
+			load_object(DObject, "Stone/Rock1.obj", "stone_tile", 0.3, 0.43, 0.6, 0, cVector3d(1.0, 0.0, 0.0));		
 			break;
 
 		case 3:	// sponge
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Schwamm/sponge.obj"));
-
-			// upper part: dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.1		
-			DObject->getChild(1)->m_material.setDynamicFriction(0.2);
-			DObject->getChild(1)->m_material.setStaticFriction(0.25);
-			DObject->getChild(1)->m_material.setStiffness(0.1*stiffnessMax);
+			// upper part: dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.1
+			load_object(DObject, "Schwamm/sponge.obj", "stone_tile", 0.2, 0.25, 0.1, 0, cVector3d(0.2, 0.2, 0.8));
 			// power part: dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
-			DObject->getChild(0)->m_material.setDynamicFriction(0.3);
-			DObject->getChild(0)->m_material.setStaticFriction(0.4);
-			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
-
-			// scaling & rotating
-			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));			
-			
-			texture = "Foam_medium";
-			load_soundfiles(DObject, texture);
+			load_object(DObject, "Schwamm/sponge.obj", "stone_tile", 0.3, 0.4, 0.2, 1, cVector3d(0.0, 0.0, 0.0));
 			break;
 
-		case 4:	// rock, sandstone		
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Stone/Rock_rough.obj"));
-			
+		case 4:	// rock, sandstone	
 			// dyn_fric = 0.4, stat_fric = 0.51, stiff = 0.6
-			DObject->m_material.setDynamicFriction(0.4);
-			DObject->m_material.setStaticFriction(0.51);
-			DObject->m_material.setStiffness(0.6*stiffnessMax);
-			
-			// scaling & rotating
-			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
-			
-			texture = "stone_tile";
-			load_soundfiles(DObject, texture);
+			load_object(DObject, "Stone/Rock_rough.obj", "stone_tile", 0.4, 0.51, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
 			break;
 
 		 case 5:	 // Cork
-			
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/Cork/cork.obj"));
-			
-			// dyn_fric = 0.5, stat_fric = 0.5, stiff = ??
-			DObject->getChild(0)->m_material.setDynamicFriction(0.5);
-			DObject->getChild(0)->m_material.setStaticFriction(0.5);
-			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
-
-			// scaling & rotating
-			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
-
-			texture = "Cork";
-			load_soundfiles(DObject, texture);
+			 // dyn_fric = 0.5, stat_fric = 0.5, stiff = ??
+			load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
 			break;	 	
 			
 			/* case 6:	// bottle
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/cork/cork.obj"));
-
 			// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
-			DObject->getChild(0)->m_material.setDynamicFriction(0.2);
-			DObject->getChild(0)->m_material.setStaticFriction(0.25);
-			DObject->getChild(0)->m_material.setStiffness(0.2*stiffnessMax);
-
-			// scaling & rotating
-			DObject->scale(0.003);
-			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
-
-			DObject->setUseTexture(true);
-			// DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
-			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
-			break;	 */	
+			load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
+			break;
 			
 			/* case 7:	// ice
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/cork/cork.obj"));
-
 			// dyn_fric = 0.02, stat_fric = 0.03, stiff = 0.8
-			DObject->getChild(0)->m_material.setDynamicFriction(0.02);
-			DObject->getChild(0)->m_material.setStaticFriction(0.03);
-			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);
-
-			// scaling & rotating
-			DObject->scale(0.003);
-			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
-
-			DObject->setUseTexture(true);
-			// DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
-			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
-			break;	 */	
+			load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
+			break;
 			
 			
 		/* case 8:	// (shot) glass
-			fileload = DObject->loadFromFile(RESOURCE_PATH("resources/models/cork/cork.obj"));
-
 			// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-			DObject->getChild(0)->m_material.setDynamicFriction(0.15);
-			DObject->getChild(0)->m_material.setStaticFriction(0.19);
-			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);
-
-			// scaling & rotating
-			DObject->scale(0.003);
-			DObject->rotate(cVector3d(0.0, 0.0, 1.0), cDegToRad(90));
-
-			DObject->setUseTexture(true);
-			// DObject->file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,BASS_STREAM_DECODE);	
-			file_stream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);		
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
+			load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
 			break;	 */	
+
 		} // end of case statement
-		
-		//// make the outside of the DObject rendered in wireframe
-		//((cMesh*)(DObject->getChild(1)))->setWireMode(true);
-
-		//// make the outside of the DObject rendered in semi-transparent
-		//((cMesh*)(DObject->getChild(1)))->setUseTransparency(false);
-		//((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
-
-		// resize DObject to screen
-
 		
 		// 5) compute boundary box
 		// 6) create collision detector
 		// 8) intialize stream
-			// get dimensions of object
+
+		// get dimensions of object
 		double size = cSub(DObject->getBoundaryMax(), DObject->getBoundaryMin()).length();
 
 		// resize object to screen
@@ -877,12 +769,8 @@ void updateHaptics(void)
 		// update position and orientation of tool
 		tool->updatePose();			
 		// compute interaction forces
-		if(useFriction)
-			((ch_generic3dofPointer*)tool)->computeInteractionForcesD();
-		else
-			tool->computeInteractionForces();
-
-
+		if(useFriction) ((ch_generic3dofPointer*)tool)->computeInteractionForcesD();
+		else tool->computeInteractionForces();
 
 		//Sound
 		// check if the tool is touching an object
@@ -895,9 +783,7 @@ void updateHaptics(void)
 				LastID=GObject->getParent()->m_tag;					
 				//BASS_ChannelPlay(Objects[LastID]->finalStream[0],FALSE==0);
 				if(LastID>=0) ChangeSound(LastID);
-				// cout << "nervt" << GObject->getParent()->m_tag <<endl;
-				
-				
+				// cout << "nervt" << GObject->getParent()->m_tag <<endl;	
 			}
 		}
 		else{
@@ -921,8 +807,6 @@ void updateHaptics(void)
 			break;
 		}
 
-
-		
 		// send forces to device
 		tool->applyForces();
 		tool->m_proxyPointForceModel->getForce();
@@ -937,23 +821,7 @@ void updateHaptics(void)
 
 //---------------------------------------------------------------------------
 
-
-// ch lab
-// set static and dynamic friction coefficients for the object, propagating 
-// them to the children
-void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff, const double& dynamic_coeff){
-	//obj->m_material.setDynamicFriction(dynamic_coeff);
-	//obj->m_material.setStaticFriction(static_coeff);
-
-	//for(unsigned int i = 0; i < obj->getNumChildren(); i++)
-	//{
-	//	ch_setFrictionCoefficients(obj->getChild(i), static_coeff, dynamic_coeff);		
-	//}	
-}
-
-
 void redrawUI(){
-	
 	string Wrongs="INCORRECT: " + to_string(inc);
 	string Rights="CORRECT: " + to_string(cor);
 	CounterI.m_string=Wrongs;
@@ -969,7 +837,6 @@ void startGame(void){
 	for(int s=0;s<Objects.size();s++){
 		Objects[s]->setShowBox(false);
 		Objects[s]->setPos(0,0,0);
-
 	}
 
 	camera->set( cVector3d (3.0, 0.0, 0.0),    // camera position (eye)
@@ -1133,13 +1000,21 @@ void ChangeSound(int ID){
 
 //---------------------------------------------------------------------------
 
-void load_soundfiles(cMesh *DObject ,string texture){
-	for(int sf=0;sf<5;sf++){
-		t_val = sf + 1;
-		t_ctr = std::to_string(t_val);
-		t_path = "resources/sounds/oneSec/" + texture + "/f" + t_ctr + ".wav";
-		DObject->finalStream[sf]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH(t_path),0,0,0);
+void load_object(cMesh *DObject, string f_obj, string i_texture, double i_dyn_fric, double i_stat_fric, double i_stiffness, int numChild, cVector3d cvd){
+	if (numChild == 0){
+		t_path = "resources/models/" + f_obj;
+		fileload = DObject->loadFromFile(RESOURCE_PATH(t_path));
+		for(int sf=0;sf<5;sf++){
+			t_val = sf + 1;
+			t_ctr = std::to_string(t_val);
+			t_path = "resources/sounds/oneSec/" + i_texture + "/f" + t_ctr + ".wav";
+			DObject->finalStream[sf]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH(t_path),0,0,0);
+		}
+		DObject->rotate(cvd, cDegToRad(90));
 	}
+	DObject->getChild(numChild)->m_material.setDynamicFriction(i_dyn_fric);
+	DObject->getChild(numChild)->m_material.setStaticFriction(i_stat_fric);
+	DObject->getChild(numChild)->m_material.setStiffness(i_stiffness*stiffnessMax);	
 }
 
 //---------------------------------------------------------------------------
@@ -1325,3 +1200,40 @@ void load_soundfiles(cMesh *DObject ,string texture){
 //	
 //	cout << "warsch" << BASS_ErrorGetCode();
 //}
+
+// bullsch nach cases
+		
+		//// make the outside of the DObject rendered in wireframe
+		//((cMesh*)(DObject->getChild(1)))->setWireMode(true);
+
+		//// make the outside of the DObject rendered in semi-transparent
+		//((cMesh*)(DObject->getChild(1)))->setUseTransparency(false);
+		//((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
+
+		// resize DObject to screen
+
+// anderer bullsch
+
+//void load_soundfiles(cMesh *DObject ,string texture){
+//	for(int sf=0;sf<5;sf++){
+//		t_val = sf + 1;
+//		t_ctr = std::to_string(t_val);
+//		t_path = "resources/sounds/oneSec/" + texture + "/f" + t_ctr + ".wav";
+//		DObject->finalStream[sf]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH(t_path),0,0,0);
+//	}
+//}
+
+// alter bullsch
+
+// ch lab
+// set static and dynamic friction coefficients for the object, propagating 
+// them to the children
+void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff, const double& dynamic_coeff){
+	//obj->m_material.setDynamicFriction(dynamic_coeff);
+	//obj->m_material.setStaticFriction(static_coeff);
+
+	//for(unsigned int i = 0; i < obj->getNumChildren(); i++)
+	//{
+	//	ch_setFrictionCoefficients(obj->getChild(i), static_coeff, dynamic_coeff);		
+	//}	
+}
