@@ -206,7 +206,8 @@ void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff,
 // modify sound according to user action
 void ChangeSound(int ID);
 
-
+// load all five sound files of specific texture
+void load_soundfiles(std::string texture);
 
 //===========================================================================
 /*
@@ -507,7 +508,13 @@ int main(int argc, char* argv[]){
 			DObject->getChild(0)->m_material.setStaticFriction(0.15);
 			DObject->getChild(0)->m_material.setStiffness(0.8*stiffnessMax);		
 			
-			DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/classic.mp3"),0,0,0);	
+			texture = Glass;
+			for(int sf=0;sf<5;sf++){DObject->finalStream[sf]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/" + texture + "/f" + (sf+1)),0,0,0);}
+			/*DObject->finalStream[0]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f1"),0,0,0);
+			DObject->finalStream[1]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f2"),0,0,0);
+			DObject->finalStream[2]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f3"),0,0,0);
+			DObject->finalStream[3]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f4"),0,0,0);
+			DObject->finalStream[4]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH("resources/sounds/oneSec/Glass/f5"),0,0,0);*/
 			break;
 
 		case 1: // bunny
@@ -1226,6 +1233,12 @@ void ChangeSound(int ID){
 	//BASS_ChannelSetAttribute(Objects[ID]->finalStream[freq], BASS_ATTRIB_FREQ, frequency);
 	BASS_ChannelPlay(Objects[ID]->finalStream[freq],FALSE);
 }
+
+//---------------------------------------------------------------------------
+
+//void load_soundfiles(std::string texture){
+//	
+//}
 
 //---------------------------------------------------------------------------
 
