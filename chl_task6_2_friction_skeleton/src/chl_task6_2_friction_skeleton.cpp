@@ -162,7 +162,7 @@ int LastID;
 //DWORD CALLBACK MyStreamWriter(HSTREAM handle, void *buf, DWORD len, void *user);
 void StartPlayback(cMesh* Obj);
 
-
+//JULIAN IST EIN HOMOFÜRST
 
 
 
