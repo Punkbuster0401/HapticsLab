@@ -34,6 +34,7 @@ last revision: 07.06.2010*/
 #include <time.h>
 #include "bass.h"
 #include "chai3d.h" 
+#include <ctime>
 //#include <CMesh.h>
 
 //---------------------------------------------------------------------------
@@ -57,6 +58,8 @@ using namespace std;
 //---------------------------------------------------------------------------
 //							DECLARED VARIABLES
 //---------------------------------------------------------------------------
+bool b_timing = false;
+
 
 // a world that contains all objects of the virtual environment
 cWorld* world;
@@ -102,20 +105,21 @@ vector<cMesh*> Objects;
 int aktObj=0;
 
 //Set number of Objects
-int NumObj=6;
+int NumObj = 6;
+int act_obj = 0;
 
 int multChoice[3];
 static int button;
 int realModel;
 int selectedModel;
-bool newResult;
+//bool newResult;
 
 double distToObj[3];
 bool newButPush=false;
-
+bool highlight_box = false;
 // transparency level
 double transparencyLevel = 0.3;
-int curState=0;
+//int curState=0;
 // virtual drill mesh
 cMesh* drill;
 
@@ -143,6 +147,9 @@ bool simulationFinished = false;
 //////////////////////////////////////////////////////////////////////////////////////
 //									AUDIO											//
 //////////////////////////////////////////////////////////////////////////////////////
+int sound_ctr = 0;
+int timing_ctr = 0;
+int audio_f = 0;
 bool fileload;
 string texture, t_ctr, t_path, f_obj;
 long double t_val;
@@ -152,7 +159,16 @@ cVector3d force;
 static const int numStreams=5;
 int LastID;
 void StartPlayback(cMesh* Obj);
+bool b_end;
+bool nr_input_el = true;
+int inp_nr = 5;
+int nr_of_games = 5;
 
+clock_t t_begin, t_end;
+int current_state;
+// haptics loop
+cMesh* ContObject;
+cGenericObject* GObject; 
 //---------------------------------------------------------------------------
 //							DECLARED MACROS
 //---------------------------------------------------------------------------
@@ -182,10 +198,10 @@ void updateGraphics(void);
 void updateHaptics(void);
 
 //start game logic
-void startGame(void);
-void selectSolution(void);
-void nextState(void);
-void checkSolution(void);
+//void startGame(void);
+//void selectSolution(void);
+//void nextState(void);
+//void checkSolution(void);
 
 // ch lab
 double static_coeff;
@@ -199,6 +215,15 @@ void load_object(cMesh *DObject, string f_obj, string texture, double stat_fric,
 
 // modify sound according to user action
 void ChangeSound(int ID);
+
+// game logic
+void gameLogic(void);
+
+// highlight colission box
+void highlight_col_box(void);
+
+// handles space bar
+void space_bar_func(void);
 
 // load all five sound files of specific texture
 //void load_soundfiles(cMesh *DObject, string f_obj, string texture, double dyn_fric, double stat_fric, double stiffness);
@@ -239,16 +264,27 @@ int main(int argc, char* argv[]){
 	printf ("#################### Haptic Model Detect Quizgame #################### \n");
 	printf ("###################################################################### \n");
 	printf ("###################################################################### \n");
-	printf ("\n");
-	printf ("Instructions:\n\n");
-	printf ("- Use haptic device and user switch to feel the shape \n");
-	printf ("  and guess the object. \n");
 	printf ("\n\n");
-	printf ("Keyboard Options:\n\n");
-	printf ("[1-5] - Model 1-N \n");	
-	printf ("[x] - Exit application\n");
-	printf ("[N] -New Game \n");
+	printf ("Gameplay:\n\n");
+	printf ("[I] Init Phase --> get to know the objects \n");
+	printf ("\t [Q] -Show Last Model \n");
+	printf ("\t [W] -Show Next Model \n\n");
+	printf ("[R] Load New Object --> explore the object \n\n");
+	printf ("[SPACE] Display possible solutions \n");
+	printf ("\t --> Touch the correct object  \n");
+	printf ("\t --> the appropriate colission box will turn blue \n\n");
+	printf ("[SPACE] Check if solution is correct \n");
+	printf ("\t --> the colission box of the correct object will turn green \n\n");
 	printf ("\n\n");
+	printf ("Choose the number of elements you want to guess\n");
+	printf ("[1] --> gues 3 objects \n");
+	printf ("[2] --> gues 5 objects (default) \n");
+	printf ("[3] --> gues 10 objects \n\n\n");
+	//printf ("[N] -New Game \n");
+	//printf ("[1-5] - Model 1-N \n");	
+	//printf ("[x] - Exit application\n");
+	////printf ("[N] -New Game \n");
+	//printf ("\n\n");
 
 	// parse first arg to try and locate resources
 	resourceRoot = string(argv[0]).substr(0,string(argv[0]).find_last_of("/\\")+1);
@@ -402,11 +438,6 @@ int main(int argc, char* argv[]){
 	mat.m_specular.set(1.0, 1.0, 1.0);
 
 	// switch chooses the correct object and sets the attributes of the object
-	// 1) load object
-	// 2) set material (friction, stiffness, ...)
-	// 3) scale and rotate the object
-	// 4) activate texture
-	// 5) load sound files
 	for(int it=0;it<NumObj;it++){
 		cMesh *DObject = new cMesh(world);
 
@@ -420,7 +451,7 @@ int main(int argc, char* argv[]){
 		switch(it){ // set object specific properties
 
 		case 0: // tooth
-			// load soundfiles, dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8
+			// load soundfiles, dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8s
 			load_object(DObject, "tooth/tooth.3ds", "Glass", 0.15, 0.2, 0.8, 0, cVector3d(0.0, 0.0, 0.0));
 			break;
 
@@ -443,7 +474,7 @@ int main(int argc, char* argv[]){
 
 		case 4:	// rock, sandstone	
 			// dyn_fric = 0.4, stat_fric = 0.51, stiff = 0.6
-			load_object(DObject, "Stone/Rock_rough.obj", "stone_tile", 0.4, 0.51, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
+			load_object(DObject, "Stone/Rock_rough.obj", "testfolder", 0.4, 0.51, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
 			break;
 
 		 case 5:	 // Cork
@@ -451,18 +482,22 @@ int main(int argc, char* argv[]){
 			load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
 			break;	 	
 			
-			/* case 6:	// bottle
-			// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
-			load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
-			break;
-			
-			/* case 7:	// ice
-			// dyn_fric = 0.02, stat_fric = 0.03, stiff = 0.8
-			load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
-			break;
-			
-			
-		/* case 8:	// (shot) glass
+		//case 6:	// paper Cup
+		//	// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
+		//	load_object(DObject, "paperCup/paperCup5.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+		//	break;
+
+		//	/* case 7:	// bottle
+		//	// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
+		//	load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
+		//	break;
+		//*/	
+		//case 7:	// ice
+		//	// dyn_fric = 0.02, stat_fric = 0.03, stiff = 0.8
+		//	load_object(DObject, "iceCube/icecube.obj", "Foil_isolating", 0.01, 0.01, 0.8, 0, cVector3d(0.0, 0.2, 0.0));
+		//	break;
+			/*
+			case 9:	// (shot) glass
 			// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
 			load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
 			break;	 */	
@@ -477,14 +512,11 @@ int main(int argc, char* argv[]){
 		double size = cSub(DObject->getBoundaryMax(), DObject->getBoundaryMin()).length();
 
 		// resize object to screen
-		if (size > 0)
-		{
-			DObject->scale( 2.0 * tool->getWorkspaceRadius() / size);
-		}
+		if (size > 0) DObject->scale( 2.0 * tool->getWorkspaceRadius() / size);
 
 		DObject->setUseTexture(true);
 		
-		//// compute a boundary box
+		// compute a boundary box
 		DObject->computeBoundaryBox(true);
 		// compute collision detection algorithm		
 		DObject->createAABBCollisionDetector(1.01 * proxyRadius, true, false);
@@ -495,26 +527,12 @@ int main(int argc, char* argv[]){
 		//TODO Ghost objects
 
 	}
-	for(int NP=0;NP<4;NP++){
-		cout<< "dada" << Objects[NP]->m_tag <<endl;
-	}
+	//for(int NP=0;NP<4;NP++) cout<< "loading objects" << Objects[NP]->m_tag <<endl;
 	// create a new mesh.
 	drill = new cMesh(world);
 
 	// load a drill like mesh and attach it to the tool
 	fileload = drill->loadFromFile(RESOURCE_PATH("resources/models/drill/drill.3ds"));
-	if (!fileload)
-	{
-#if defined(_MSVC)
-		fileload = drill->loadFromFile("../../../bin/resources/models/drill/drill.3ds");
-#endif
-	}
-	if (!fileload)
-	{
-		printf("Error - 3D Model failed to load correctly.\n");
-		close();
-		return (-1);
-	}
 
 	// resize tool mesh model
 	drill->scale(0.004);
@@ -585,7 +603,6 @@ int main(int argc, char* argv[]){
 	return (0);
 }
 
-
 //---------------------------------------------------------------------------
 
 void resizeWindow(int w, int h){
@@ -618,6 +635,7 @@ void keySelect(unsigned char key, int x, int y){
 				Objects[l]->setShowEnabled(false,true);
 			}
 			Objects[1]->setShowEnabled(true,true);
+			inp_nr = 3;
 			break;
 			
 		case '2':
@@ -625,13 +643,15 @@ void keySelect(unsigned char key, int x, int y){
 				Objects[l]->setShowEnabled(false,true);
 			}
 			Objects[2]->setShowEnabled(true,true);
+			inp_nr = 5;
 			break;
 
 		case '3':
 			for(int l=0;l<Objects.size();l++){
 				Objects[l]->setShowEnabled(false,true);
 			}
-			Objects[3]->setShowEnabled(true,true);			
+			Objects[3]->setShowEnabled(true,true);	
+			inp_nr = 10;
 			break;
 
 		case '4':
@@ -647,6 +667,20 @@ void keySelect(unsigned char key, int x, int y){
 			}
 			Objects[5]->setShowEnabled(true,true);
 			break;
+
+		/*case '6':
+			for(int l=0;l<Objects.size();l++){
+				Objects[l]->setShowEnabled(false,true);
+			}
+			Objects[6]->setShowEnabled(true,true);
+			break;
+		
+		case '7':
+			for(int l=0;l<Objects.size();l++){
+				Objects[l]->setShowEnabled(false,true);
+			}
+			Objects[7]->setShowEnabled(true,true);
+			break;*/
 
 		case '-':
 			//	// decrease transparency level
@@ -687,9 +721,51 @@ void keySelect(unsigned char key, int x, int y){
 			//	}
 			break;
 			
-		case 'n':
-			startGame();
-			break;			
+		case 32: // space bar
+			//cout<< "space bar" << current_state << endl;
+			space_bar_func();
+			break;
+
+		/*case 's':
+			cout<< "go to solution" << current_state << endl;
+			current_state = 2;
+			gameLogic();
+			break;	*/
+
+		case 'r':
+			//cout<< "start/resart game" << current_state << endl;
+			current_state = 1;
+			gameLogic();
+			nr_input_el = false;
+			break;	
+
+		case 'i': // reset --> go to beginning of the game
+			//cout<< "init game" << current_state << endl;
+			current_state = 0;
+			gameLogic();
+			nr_input_el = false;
+			break;
+
+		case 'q':
+			//cout<< "previous" << current_state << endl;
+			if((current_state == 0) && (act_obj > 0)) act_obj--;
+			gameLogic();
+			break;
+
+		case 'w':
+			//cout<< "next" << current_state  <<endl;
+			if((current_state == 0) && (act_obj < (NumObj - 1))) act_obj++;
+			gameLogic();
+			break;
+
+		case 13:
+			//cout << "ENTER" << endl;
+			if(nr_input_el == true){
+				nr_of_games = inp_nr;
+				cout << "number of games: \t" << nr_of_games << endl;
+			}
+			break;
+
 	}	
 	
 }
@@ -698,11 +774,9 @@ void keySelect(unsigned char key, int x, int y){
 
 //---------------------------------------------------------------------------
 
-void menuSelect(int value)
-{
+void menuSelect(int value){
 
-	switch (value)
-	{
+	switch (value){
 		// enable full screen display
 	case OPTION_FULLSCREEN:
 		glutFullScreen();
@@ -721,8 +795,7 @@ void menuSelect(int value)
 
 //---------------------------------------------------------------------------
 
-void close(void)
-{
+void close(void){
 	// stop the simulation
 	simulationRunning = false;
 
@@ -735,13 +808,15 @@ void close(void)
 
 //---------------------------------------------------------------------------
 
-void updateGraphics(void)
-{
+void updateGraphics(void){
 	// render world
 	camera->renderView(displayW, displayH);
 
 	// Swap buffers
 	glutSwapBuffers();
+
+	if (highlight_box == true) highlight_col_box(); // highlight colission box, if user is close to object
+
 
 	// check for any OpenGL errors
 	GLenum err;
@@ -754,65 +829,58 @@ void updateGraphics(void)
 
 //---------------------------------------------------------------------------
 
-void updateHaptics(void)
-{
-	// CH lab
+void updateHaptics(void){
+	
 	tool->setShowEnabled(true, true);
 
 	// turn off friction (the original Chai3d friction implementation!)
 	tool->m_proxyPointForceModel->m_useFriction = false;
 
 	// main haptic simulation loop
-	while(simulationRunning)
-	{
-		
+	while(simulationRunning){
+		if(b_timing){ if(timing_ctr == 0){ t_begin = clock();}}
+		timing_ctr++;
 		// update position and orientation of tool
 		tool->updatePose();			
 		// compute interaction forces
-		if(useFriction) ((ch_generic3dofPointer*)tool)->computeInteractionForcesD();
-		else tool->computeInteractionForces();
+		//if(useFriction) 
+		((ch_generic3dofPointer*)tool)->computeInteractionForcesD();
+		//else tool->computeInteractionForces();
 
 		//Sound
 		// check if the tool is touching an object
-		cMesh* ContObject = (cMesh*)tool->m_proxyPointForceModel->m_contactPoint0->m_object;
-		cGenericObject* GObject = tool->m_proxyPointForceModel->m_contactPoint0->m_object; 
+		ContObject = (cMesh*)tool->m_proxyPointForceModel->m_contactPoint0->m_object;
+		GObject = tool->m_proxyPointForceModel->m_contactPoint0->m_object; 
 		
 		//TODO Change to for Loop if Hstream member keeps empty
-		if(ContObject!=NULL){
-			if (tool->isInContact(ContObject)){		
-				LastID=GObject->getParent()->m_tag;					
-				//BASS_ChannelPlay(Objects[LastID]->finalStream[0],FALSE==0);
-				if(LastID>=0) ChangeSound(LastID);
-				// cout << "nervt" << GObject->getParent()->m_tag <<endl;	
+		sound_ctr++;
+		if (sound_ctr == 100){ // only change sound every 100 iterations
+			if(ContObject != NULL){
+				if (tool->isInContact(ContObject)){		
+					LastID = GObject->getParent()->m_tag;					
+					if(LastID >= 0) ChangeSound(LastID);	
+				}
 			}
+			else{
+				if(LastID >= 0) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
+			}
+			sound_ctr = 0;
 		}
-		else{
-			if(LastID>=0) BASS_ChannelStop(Objects[LastID]->finalStream[0]);
-		}
-		button = tool->getUserSwitch(0);
-		if(button==0)	newButPush=true;
-		//std::cout<<"Dist"<<tool->getDeviceGlobalPos()<<std::endl ;
-
-		/*	 if (button == 1)
-		{
-		nextState();
-		}*/
-		switch(curState)
-		{
-		case 0:
-			selectSolution();
-			break;
-		case 1 :
-			checkSolution();
-			break;
-		}
-
+		
 		// send forces to device
 		tool->applyForces();
 		tool->m_proxyPointForceModel->getForce();
 		
 		// compute global reference frames for each object
 		world->computeGlobalPositions(true);
+
+		if(b_timing){
+			if (timing_ctr == 1000){
+				t_end = clock();
+				cout << "execution time in seconds: \t" << ((float)(t_end-t_begin))/CLOCKS_PER_SEC << std::endl;
+				timing_ctr = 0;
+			}
+		}
 	}
 
 	// exit haptics thread
@@ -830,145 +898,6 @@ void redrawUI(){
 
 //---------------------------------------------------------------------------
 
-void startGame(void){
-	curState=0;
-	checkBoxColl=false;
-	tool->setWorkspaceRadius(1.0);
-	for(int s=0;s<Objects.size();s++){
-		Objects[s]->setShowBox(false);
-		Objects[s]->setPos(0,0,0);
-	}
-
-	camera->set( cVector3d (3.0, 0.0, 0.0),    // camera position (eye)
-		cVector3d (0.0, 0.0, 0.0),    // lookat position (target)
-		cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
-
-	realModel=rand() % NumObj;
-	cout<<"Model "<<realModel<<endl;
-	for(int l=0;l<Objects.size();l++){
-		Objects[l]->setShowEnabled(false,true);
-	}
-	Objects[realModel]->setShowEnabled(true,true);
-	//Objects[realModel]->setHapticEnabled(true,true);
-
-	Objects[realModel]->setTransparencyLevel(0);
-}
-
-//---------------------------------------------------------------------------
-
-void selectSolution(void){
-	if(button==1 && newButPush==1 && checkBoxColl==false){
-		vector <int> list;
-		//fill list
-		for(int l=0;l<Objects.size();l++){
-			Objects[l]->setShowEnabled(false,true);		
-			list.push_back(l);
-		}
-		list.erase(list.begin()+realModel);
-		//Choose Random elements from List
-		int el;
-		for(int i=0;i<2;i++){
-			el=rand() % list.size();
-
-			multChoice[i]=list.at(el);
-			//std::cout <<"El:" << multChoice[i];
-			list.erase(list.begin()+el);
-		}
-		multChoice[2]=realModel;
-		//Shuffle Multiple Choice Elements
-		int buf1;
-		int swap;
-		for(int w=0;w<2;w++)
-		{	
-			swap=rand()%2;
-			buf1 = multChoice[2];
-			multChoice[2]=multChoice[swap];
-			multChoice[swap]=buf1;
-		}
-
-		Objects[multChoice[0]]->setPos(0.0, -2, 0.0);
-		Objects[multChoice[1]]->setPos(0.0, 0.0, 0.0);
-		Objects[multChoice[2]]->setPos(0.0, 2, 0.0);	
-
-		for(int k=0;k<3;k++){
-			Objects[multChoice[k]]->setShowEnabled(true,true);	
-			Objects[multChoice[k]]->setUseTransparency(false,true);
-			Objects[multChoice[k]]->setShowBox(true);
-			Objects[multChoice[k]]->setBoxColor(cColorf(1,0,0,1));
-			distToObj[k] = Objects[multChoice[k]]->getBoundaryMax().distance(Objects[multChoice[k]]->getBoundaryCenter());
-		}
-		camera->set( cVector3d (9.0, 0.0, 0.0),    // camera position (eye)
-			cVector3d (0.0, 0.0, 0.0),    // lookat position (target)
-			cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
-		tool->setWorkspaceRadius(5.0);
-		checkBoxColl=true;
-		newButPush=false;
-	}
-
-	else if(checkBoxColl==true){
-
-		//tool->m_proxyPointForceModel->m_contactPoint0->m_object->m_tag;
-
-		for(int j=0;j<3;j++){
-			//distToObj[j] = Objects[multChoice[j]]->getBoundaryMax().distance(Objects[multChoice[j]]->getBoundaryCenter());
-			//if(tool->isInContact(Objects[multChoice[0]])){
-			if(tool->getDeviceGlobalPos().distance(Objects[multChoice[j]]->getGlobalPos()) < distToObj[j] ){
-				Objects[multChoice[j]]->setBoxColor(cColorf(0,1,0,1));					
-				//Objects[multChoice[j]]->m_material.m_diffuse.set(0,0,1);
-				if(newButPush==1 && button==1){			
-					for(int s=0;s<3;s++){
-						Objects[multChoice[s]]->setShowBox(false);
-					}
-					selectedModel=multChoice[j];
-					newResult=true;
-					curState=1;
-				}
-
-			}
-			else Objects[multChoice[j]]->setBoxColor(cColorf(1,0,0,1));	
-		}
-	}
-}
-
-//---------------------------------------------------------------------------
-
-void nextState(void){
-
-// was soll das???
-}
-
-//---------------------------------------------------------------------------
-
-void checkSolution(void){		
-	if(newResult){
-		if(selectedModel==realModel)
-		{
-			Objects[selectedModel]->setShowBox(true);
-			Objects[selectedModel]->setBoxColor(cColorf(0,1,0,1));
-			cout<<"RIGHT"<<endl;			
-			cor++;
-			redrawUI();
-
-			cout <<"Press n for new Game"<<endl;			
-		}
-		else{
-			cout<<"WRONG"<<endl;
-			cout <<"Press n for new Game"<<endl;
-			inc++;
-			redrawUI();
-			Objects[selectedModel]->setShowBox(true);
-			Objects[realModel]->setShowBox(true);
-			Objects[selectedModel]->setBoxColor(cColorf(1,0,0,1));
-			Objects[realModel]->setBoxColor(cColorf(0,1,0,1));
-		}
-		newResult=false;
-	}
-	/*close();
-	exit(0);*/
-}
-
-//---------------------------------------------------------------------------
-
 void ChangeSound(int ID){
 	// doku: http://www.bass.radio42.com/help/html/f00d6245-b20b-f37d-7982-8cc6549f4ae3.htm
 	// http://www.bass.radio42.com/help/html/937729d8-fb7a-497d-a1d5-951f42873d58.htm
@@ -977,30 +906,62 @@ void ChangeSound(int ID){
 	/*static const depth_max = 10;
 	static const max_vol_material;*/
 	int freq; //0-4
+	int max_force = 10;
+	double abs_force;
+	double d_veloc;
+	freq=0;
 	cVector3d frequency;
 	cVector3d force;
 
 	force= tool->m_lastComputedGlobalForce;
-	//cout <<"Force: " <<force;
-	//// calculate output volume
-	//if (depth < depth_max) {volume = (depth/depth_max) * max_vol_material;}
-	//else {colume = max_vol_material;}
-	// apply volume
-	//BASS_ChannelSetAttribute(Obj->stream[0], BASS_ATTRIB_MUSIC_VOL_CHAN, volume); // range 0 - 1
-	//BASS_ChannelSetAttribute(Obj->stream[freq], BBASS_ATTRIB_MUSIC_VOL_GLOBAL, volume);
-	
-	frequency = tool->m_deviceGlobalVel;
-	/*if(frequency<=5) freq=0;
-	else freq=1;*/
-	freq=0;
+	abs_force = abs(force.length());
 
-	//BASS_ChannelSetAttribute(Objects[ID]->finalStream[freq], BASS_ATTRIB_FREQ, frequency);
-	BASS_ChannelPlay(Objects[ID]->finalStream[freq],FALSE);
+	frequency = tool->m_deviceGlobalVel;
+	d_veloc = abs(frequency.length());
+
+	if (d_veloc > 1.5){
+		if (audio_f != 4) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
+		BASS_ChannelSetAttribute(Objects[ID]->finalStream[4], 	BASS_ATTRIB_VOL, abs_force/max_force);
+		BASS_ChannelPlay(Objects[ID]->finalStream[4],FALSE);
+		audio_f = 4;
+	}
+	else if (d_veloc > 0.75){
+		if (audio_f != 3) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
+		BASS_ChannelSetAttribute(Objects[ID]->finalStream[3], 	BASS_ATTRIB_VOL, abs_force/max_force);
+		BASS_ChannelPlay(Objects[ID]->finalStream[3],FALSE);
+		audio_f = 3;
+	}
+	else if (d_veloc > 0.5){
+		if (audio_f != 2) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
+		BASS_ChannelSetAttribute(Objects[ID]->finalStream[2], 	BASS_ATTRIB_VOL, abs_force/max_force);
+		BASS_ChannelPlay(Objects[ID]->finalStream[2],FALSE);
+		audio_f = 2;
+	}
+	else if (d_veloc > 0.25){
+		if (audio_f != 1) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
+		BASS_ChannelSetAttribute(Objects[ID]->finalStream[1], 	BASS_ATTRIB_VOL, abs_force/max_force);
+		BASS_ChannelPlay(Objects[ID]->finalStream[1],FALSE);
+		audio_f = 1;
+	}
+	else if (d_veloc > 0.1){
+		if (audio_f != 0) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
+		BASS_ChannelSetAttribute(Objects[ID]->finalStream[0], 	BASS_ATTRIB_VOL, abs_force/max_force);
+		BASS_ChannelPlay(Objects[ID]->finalStream[0],FALSE);
+		audio_f = 0;
+	}
+	
 }
 
 //---------------------------------------------------------------------------
-
+/*
+*	Loads the object into workspace
+*	if there are multiple children function need to be called for every children with the appropriate children number
+*/
 void load_object(cMesh *DObject, string f_obj, string i_texture, double i_dyn_fric, double i_stat_fric, double i_stiffness, int numChild, cVector3d cvd){
+	// 1) load object
+	// 2) set material (friction, stiffness, ...)
+	// 3) load sound files
+	// 4) scale and rotate the object
 	if (numChild == 0){
 		t_path = "resources/models/" + f_obj;
 		fileload = DObject->loadFromFile(RESOURCE_PATH(t_path));
@@ -1015,6 +976,175 @@ void load_object(cMesh *DObject, string f_obj, string i_texture, double i_dyn_fr
 	DObject->getChild(numChild)->m_material.setDynamicFriction(i_dyn_fric);
 	DObject->getChild(numChild)->m_material.setStaticFriction(i_stat_fric);
 	DObject->getChild(numChild)->m_material.setStiffness(i_stiffness*stiffnessMax);	
+}
+
+//---------------------------------------------------------------------------
+/*
+*	controls the game logic:
+*	phase 0: called by pressing [I]
+*		user can feel and see the object and switch between them ([Q]: last object, [W]: nex object)
+*	phase 2: called by pressing [R]
+*		user can feel the object but not see it
+*	phase 3: called by pressing [SPACE]
+*		three solutions are suggestes --> user needs to choose one
+*		touch the object until it turns blue
+*	phase 4: called by pressing [SPACE]
+*		the box will turn green, if the correct one was chosen
+*		the box will turn red and the correct one will turn green, if the wrong one was chosen
+*/
+void gameLogic(void){
+	switch(current_state){
+		case 0: // get to know the game phase
+			checkBoxColl = false;
+			tool->setWorkspaceRadius(1.0);
+			for(int s = 0; s < Objects.size(); s++){
+				Objects[s]->setShowBox(false);
+				Objects[s]->setPos(0,0,0);
+				Objects[s]->setShowEnabled(false,true);
+			}
+			camera->set( cVector3d (3.0, 0.0, 0.0),	cVector3d (0.0, 0.0, 0.0), cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
+
+			Objects[act_obj]->setShowEnabled(true, true);
+			Objects[act_obj]->setHapticEnabled(true, true);
+			Objects[act_obj]->setTransparencyLevel(true);
+			break;
+			
+		case 1: // explore the object
+			checkBoxColl = false;
+			tool->setWorkspaceRadius(1.0);
+			for(int s = 0; s < Objects.size(); s++){
+				Objects[s]->setShowBox(false);
+				Objects[s]->setPos(0,0,0);
+				Objects[s]->setShowEnabled(false, true);
+				Objects[s]->setTransparencyLevel(false);
+			}
+			camera->set( cVector3d (3.0, 0.0, 0.0), cVector3d (0.0, 0.0, 0.0), 	cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
+			
+			realModel = rand() % NumObj; // choose random object
+			Objects[realModel]->setShowEnabled(true, true);
+			Objects[realModel]->setHapticEnabled(true,true);
+			Objects[realModel]->setTransparencyLevel(false);
+			break;
+
+		case 2 : // choose the solution
+			if(newButPush == 1 && checkBoxColl == false){ // 
+				vector <int> list;
+				//fill list
+				for(int l = 0; l < Objects.size(); l++){
+					Objects[l]->setShowEnabled(false,true);		
+					list.push_back(l);
+				}
+				list.erase(list.begin() + realModel);
+				//Choose Random elements from List
+				int el;
+				for(int i = 0; i < 2; i++){
+					el = rand() % list.size();
+					multChoice[i] = list.at(el);
+					list.erase(list.begin() + el);
+				}
+				multChoice[2] = realModel;
+				//Shuffle Multiple Choice Elements
+				int buf1;
+				int swap;
+				for(int w = 0; w < 2; w++){	
+					swap = rand() % 2;
+					buf1 = multChoice[2];
+					multChoice[2] = multChoice[swap];
+					multChoice[swap] = buf1;
+				}
+				// position the elements
+				Objects[multChoice[0]]->setPos(0.0, -2, 0.0);
+				Objects[multChoice[1]]->setPos(0.0, 0.0, 0.0);
+				Objects[multChoice[2]]->setPos(0.0, 2, 0.0);	
+
+				for(int k = 0; k < 3; k++){
+					Objects[multChoice[k]]->setShowEnabled(true,true);	
+					Objects[multChoice[k]]->setUseTransparency(false, true);
+					Objects[multChoice[k]]->setShowBox(true);
+					Objects[multChoice[k]]->setBoxColor(cColorf(1,0,0,1));
+					distToObj[k] = Objects[multChoice[k]]->getBoundaryMax().distance(Objects[multChoice[k]]->getBoundaryCenter());
+				}
+				camera->set( cVector3d (9.0, 0.0, 0.0), cVector3d (0.0, 0.0, 0.0),cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
+				tool->setWorkspaceRadius(5.0);
+				checkBoxColl = true;
+				newButPush = false;
+			}
+			break;
+
+		case 3: // check result
+			if(checkBoxColl == true){
+				if(selectedModel == realModel){ // user chose the correct object
+					for(int k = 0; k < 3; k++){ // loop through all 3 objects
+						if (multChoice[k] == selectedModel) {
+							Objects[multChoice[k]]->setShowBox(true);
+							Objects[selectedModel]->setBoxColor(cColorf(0,1,0,1)); // green
+						}
+						else{
+							Objects[multChoice[k]]->setShowBox(false);
+						}
+					}
+					//cout<<"RIGHT"<<endl;			
+					cor++;
+					redrawUI();
+				}
+				else{
+					//cout<<"WRONG"<<endl;
+					inc++;
+					redrawUI();
+					Objects[selectedModel]->setShowBox(true);
+					Objects[realModel]->setShowBox(true);
+					Objects[selectedModel]->setBoxColor(cColorf(1,0,0,1)); // red
+					Objects[realModel]->setBoxColor(cColorf(0,1,0,1)); // green
+				}
+				checkBoxColl = false;
+			}
+			if ((inc + cor) == nr_of_games){
+				b_end = true;
+				cout <<"######################################################################" << endl;
+				cout <<"############## CONGRATULATIONS YOU FINISHED THE GAME #################" << endl;
+				cout <<"######################################################################" << endl;
+				cout <<"#\t \t number of false answers:" << inc << endl;
+				cout <<"#\t \t number of correct answers:" << cor <<  endl;
+				cout <<"######################################################################" << endl << endl ;
+				cout <<"Press [R] for new Game"<<endl;
+			}
+			break;
+		}
+}
+
+//---------------------------------------------------------------------------
+
+void highlight_col_box(void){
+	for (int j = 0; j < 3; j++){
+		if (tool->getDeviceGlobalPos().distance(Objects[multChoice[j]]->getGlobalPos()) < distToObj[j]){
+			Objects[multChoice[j]]->setBoxColor(cColorf(0.24, 0.47, 0.85, 1));
+		}
+		else Objects[multChoice[j]]->setBoxColor(cColorf(1, 1, 1, 1));
+	}
+}
+
+//---------------------------------------------------------------------------
+
+void space_bar_func(void){
+	if (current_state == 1){
+		current_state = 2;
+		highlight_box = true;
+	}
+	else if (current_state == 2){
+		for (int j = 0; j < 3; j++){
+			if (tool->getDeviceGlobalPos().distance(Objects[multChoice[j]]->getGlobalPos()) < distToObj[j]){ // check if decive is next to object
+				//Objects[multChoice[j]]->setBoxColor(cColorf(0, 1, 0, 1)); // change color to green
+				for (int s = 0; s < 3; s++){ Objects[multChoice[s]]->setShowBox(false); }
+				selectedModel = multChoice[j];
+				current_state = 3;
+				highlight_box = false;
+				}
+				//else Objects[multChoice[j]]->setBoxColor(cColorf(1, 0, 0, 1)); // 
+			}
+		}
+	newButPush = true;
+	gameLogic();
+
 }
 
 //---------------------------------------------------------------------------
@@ -1228,12 +1358,170 @@ void load_object(cMesh *DObject, string f_obj, string i_texture, double i_dyn_fr
 // ch lab
 // set static and dynamic friction coefficients for the object, propagating 
 // them to the children
-void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff, const double& dynamic_coeff){
-	//obj->m_material.setDynamicFriction(dynamic_coeff);
-	//obj->m_material.setStaticFriction(static_coeff);
+//void ch_setFrictionCoefficients(cGenericObject* obj, const double& static_coeff, const double& dynamic_coeff){
+//	//obj->m_material.setDynamicFriction(dynamic_coeff);
+//	//obj->m_material.setStaticFriction(static_coeff);
+//
+//	//for(unsigned int i = 0; i < obj->getNumChildren(); i++)
+//	//{
+//	//	ch_setFrictionCoefficients(obj->getChild(i), static_coeff, dynamic_coeff);		
+//	//}	
+//}
 
-	//for(unsigned int i = 0; i < obj->getNumChildren(); i++)
-	//{
-	//	ch_setFrictionCoefficients(obj->getChild(i), static_coeff, dynamic_coeff);		
-	//}	
+// anderer bullsch
+//	if (!fileload)
+//	{
+//#if defined(_MSVC)
+//		fileload = drill->loadFromFile("../../../bin/resources/models/drill/drill.3ds");
+//#endif
+//	}
+//	if (!fileload)
+//	{
+//		printf("Error - 3D Model failed to load correctly.\n");
+//		close();
+//		return (-1);
+//	}
+
+// alte game logic
+//---------------------------------------------------------------------------
+
+//void startGame(void){
+//	for(int s = 0; s < 3; s++){
+//		Objects[multChoice[s]]->setShowBox(false);
+//	}
+//	curState=0;
+//	checkBoxColl=false;
+//	tool->setWorkspaceRadius(1.0);
+//	std::cout << "# of objects: \t" << Objects.size() << std::endl;
+//	for(int s = 0; s < Objects.size(); s++){
+//		Objects[s]->setShowBox(false);
+//		Objects[s]->setPos(0,0,0);
+//	}
+//
+//	camera->set( cVector3d (3.0, 0.0, 0.0),    // camera position (eye)
+//		cVector3d (0.0, 0.0, 0.0),    // lookat position (target)
+//		cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
+//
+//	realModel=rand() % NumObj;
+//	cout<<"Model "<<realModel<<endl;
+//	for(int l = 0; l < Objects.size(); l++){Objects[l]->setShowEnabled(false,true);}
+//	Objects[realModel]->setShowEnabled(true, true);
+//	Objects[realModel]->setHapticEnabled(true,true);
+//
+//	Objects[realModel]->setTransparencyLevel(0);
+//}
+
+//---------------------------------------------------------------------------
+
+//void selectSolution(void){
+//	if(newButPush==1 && checkBoxColl==false){ // button==1 && 
+//		vector <int> list;
+//		//fill list
+//		for(int l=0;l<Objects.size();l++){
+//			Objects[l]->setShowEnabled(false,true);		
+//			list.push_back(l);
+//		}
+//		list.erase(list.begin()+realModel);
+//		//Choose Random elements from List
+//		int el;
+//		for(int i=0;i<2;i++){
+//			el=rand() % list.size();
+//
+//			multChoice[i] = list.at(el);
+//			//std::cout <<"El:" << multChoice[i];
+//			list.erase(list.begin() + el);
+//		}
+//		multChoice[2] = realModel;
+//		//Shuffle Multiple Choice Elements
+//		int buf1;
+//		int swap;
+//		for(int w = 0; w < 2; w++)
+//		{	
+//			swap=rand()%2;
+//			buf1 = multChoice[2];
+//			multChoice[2]=multChoice[swap];
+//			multChoice[swap]=buf1;
+//		}
+//
+//		Objects[multChoice[0]]->setPos(0.0, -2, 0.0);
+//		Objects[multChoice[1]]->setPos(0.0, 0.0, 0.0);
+//		Objects[multChoice[2]]->setPos(0.0, 2, 0.0);	
+//
+//		for(int k=0;k<3;k++){
+//			Objects[multChoice[k]]->setShowEnabled(true,true);	
+//			Objects[multChoice[k]]->setUseTransparency(false,true);
+//			Objects[multChoice[k]]->setShowBox(true);
+//			Objects[multChoice[k]]->setBoxColor(cColorf(1,0,0,1));
+//			distToObj[k] = Objects[multChoice[k]]->getBoundaryMax().distance(Objects[multChoice[k]]->getBoundaryCenter());
+//		}
+//		camera->set( cVector3d (9.0, 0.0, 0.0),    // camera position (eye)
+//			cVector3d (0.0, 0.0, 0.0),    // lookat position (target)
+//			cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
+//		tool->setWorkspaceRadius(5.0);
+//		checkBoxColl = true;
+//		newButPush = false;
+//	}
+//
+//	else if(checkBoxColl == true){
+//
+//		//tool->m_proxyPointForceModel->m_contactPoint0->m_object->m_tag;
+//
+//		for(int j = 0; j < 3; j++){
+//			//distToObj[j] = Objects[multChoice[j]]->getBoundaryMax().distance(Objects[multChoice[j]]->getBoundaryCenter());
+//			//if(tool->isInContact(Objects[multChoice[0]])){
+//			if(tool->getDeviceGlobalPos().distance(Objects[multChoice[j]]->getGlobalPos()) < distToObj[j] ){
+//				Objects[multChoice[j]]->setBoxColor(cColorf(0,1,0,1));					
+//				//Objects[multChoice[j]]->m_material.m_diffuse.set(0,0,1);
+//				if(newButPush==1){		// && button==1	
+//					for(int s = 0; s < 3; s++){
+//						Objects[multChoice[s]]->setShowBox(false);
+//					}
+//					selectedModel = multChoice[j];
+//					newResult = true;
+//					curState = 1;
+//				}
+//			}
+//			else Objects[multChoice[j]]->setBoxColor(cColorf(1,0,0,1));	
+//		}
+//	}
+//}
+
+//---------------------------------------------------------------------------
+
+void nextState(void){
+
+// was soll das???
 }
+
+//---------------------------------------------------------------------------
+
+//void checkSolution(void){		
+//	if(newResult){
+//		if(selectedModel == realModel)
+//		{
+//			//Objects[selectedModel]->setShowBox(true);
+//			Objects[selectedModel]->setBoxColor(cColorf(0,1,0,1));
+//			cout<<"RIGHT"<<endl;			
+//			cor++;
+//			redrawUI();
+//			cout <<"Press n for new Game"<<endl;
+//			
+//		}
+//		else{
+//			cout<<"WRONG"<<endl;
+//			cout <<"Press n for new Game"<<endl;
+//			inc++;
+//			redrawUI();
+//			Objects[selectedModel]->setShowBox(true);
+//			//Objects[realModel]->setShowBox(true);
+//			Objects[selectedModel]->setBoxColor(cColorf(1,0,0,1));
+//			Objects[realModel]->setBoxColor(cColorf(0,1,0,1));
+//		}
+//		for(int s = 0; s < 3; s++){
+//			Objects[multChoice[s]]->setShowBox(false);
+//		}
+//		newResult=false;
+//	}
+//	/*close();
+//	exit(0);*/
+//}
