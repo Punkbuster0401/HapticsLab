@@ -69,6 +69,8 @@ cCamera* camera;
 
 // a light source to illuminate the objects in the virtual scene
 cLight *light;
+cLight *light2;
+cLight *light3;
 
 // a little "chai3d" bitmap logo at the bottom of the screen
 cBitmap* logo;
@@ -102,10 +104,10 @@ double proxyRadius;
 vector<cMesh*> Objects;
 //cMesh* DObject;
 
-int aktObj=0;
+
 
 //Set number of Objects
-int NumObj = 6;
+int NumObj = 7;
 int act_obj = 0;
 
 int multChoice[3];
@@ -320,10 +322,19 @@ int main(int argc, char* argv[]){
 
 	// create a light source and attach it to the camera
 	light = new cLight(world);
+	light2 = new cLight(world);
+	light3= new cLight(world);
 	camera->addChild(light);                   // attach light to camera
 	light->setEnabled(true);                   // enable light source
 	light->setPos(cVector3d( 2.0, 0.5, 1.0));  // position the light source
 	light->setDir(cVector3d(-2.0, 0.5, 1.0));  // define the direction of the light beam
+	light2->setEnabled(true);                   // enable light source
+	light2->setPos(cVector3d( 0.0, 2.0, 1.0));  // position the light source
+	light2->setDir(cVector3d(0.0, 0.0, 0.0));  // define the direction of the light beam
+	light3->setEnabled(true);                   // enable light source
+	light3->setPos(cVector3d( 0.0, -2.0, 1.0));  // position the light source
+	light3->setDir(cVector3d(0.0, 0.0, 0.0));  // define the direction of the light beam
+
 
 
 	//-----------------------------------------------------------------------
@@ -485,10 +496,10 @@ int main(int argc, char* argv[]){
 			load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
 			break;	 	
 			
-		//case 6:	// paper Cup
-		//	// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
-		//	load_object(DObject, "paperCup/paperCup5.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
-		//	break;
+		case 6:	// paper Cup
+			// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
+			load_object(DObject, "paper_cup/paper_cup_final.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+			break;
 
 		//	/* case 7:	// bottle
 		//	// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
