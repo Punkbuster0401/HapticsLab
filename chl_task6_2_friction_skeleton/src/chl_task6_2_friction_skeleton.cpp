@@ -457,7 +457,7 @@ int main(int argc, char* argv[]){
 
 		case 1: // bunny
 			// load soundfiles, dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
-			load_object(DObject, "bunny/bunny.obj", "Cashmere", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/t_bear.obj", "Cashmere", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
 			break;
 
 		case 2:	// rock,	granite
