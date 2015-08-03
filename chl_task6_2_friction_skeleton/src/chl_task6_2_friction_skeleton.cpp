@@ -108,7 +108,7 @@ vector<cMesh*> Objects;
 
 
 //Set number of Objects
-int NumObj = 8;
+int NumObj = 9;
 int act_obj = 0;
 
 int multChoice[3];
@@ -515,6 +515,13 @@ int main(int argc, char* argv[]){
 			DObject->setTransparencyLevel(0.2);
 			DObject->setUseTransparency(true,true);
 	
+			break;
+		case 8:	// Teddy
+			// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
+			load_object(DObject, "teddy_bear/t_bear.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/t_bear.obj", "Cork", 0.5, 0.5, 0.6, 1, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/t_bear.obj", "Cork", 0.5, 0.5, 0.6, 2, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/t_bear.obj", "Cork", 0.5, 0.5, 0.6, 3, cVector3d(0.0, 0.0, 0.0));
 			break;
 
 			/*
