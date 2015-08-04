@@ -945,16 +945,24 @@ void ChangeSound(int ID){
 	int max_force = 10;
 	double abs_force;
 	double d_veloc;
-	freq=0;
-	cVector3d frequency;
+	double cos_veloc_angle;
+	freq = 0;
+	cVector3d device_veloc, tan_veloc;
 	cVector3d force;
+	cVector3d norm_force;
 
-	force= tool->m_lastComputedGlobalForce;
+	force = tool->m_lastComputedGlobalForce;
+	norm_force = tool->m_proxyPointForceModel->getTangentialForce();
+	//getNormalForce();
+
+	force = tool->m_lastComputedGlobalForce;
 	abs_force = abs(force.length());
 
-	frequency = tool->m_deviceGlobalVel;	
-	d_veloc = abs(frequency.length());
-	max_force=abs_force;
+	device_veloc = tool->m_deviceGlobalVel;
+	//d_veloc = abs(frequency.length());
+	                                
+	cos_veloc_angle = (norm_force.dot(device_veloc))/(device_veloc.length()*norm_force.length());
+	tan_veloc = cos_veloc_angle * device_veloc;
 
 	if (d_veloc > 1.5){
 		if (audio_f != 4) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
@@ -988,6 +996,7 @@ void ChangeSound(int ID){
 	}
 	
 }
+
 
 //---------------------------------------------------------------------------
 /*
