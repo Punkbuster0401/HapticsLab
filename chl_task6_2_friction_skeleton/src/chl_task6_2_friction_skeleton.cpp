@@ -934,6 +934,8 @@ void ChangeSound(int ID){
 	cVector3d force;
 	cVector3d norm_force;
 
+	cout << "Marc hat nen kleinen schnidel" << endl;
+
 	force = tool->m_lastComputedGlobalForce;
 	norm_force = tool->m_proxyPointForceModel->getTangentialForce();
 	//getNormalForce();
