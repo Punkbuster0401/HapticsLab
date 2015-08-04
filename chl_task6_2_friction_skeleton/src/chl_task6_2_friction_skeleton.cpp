@@ -108,7 +108,7 @@ vector<cMesh*> Objects;
 
 
 //Set number of Objects
-int NumObj = 9;
+int NumObj = 7;
 int act_obj = 0;
 
 int multChoice[3];
@@ -473,7 +473,10 @@ int main(int argc, char* argv[]){
 
 		case 1: // bunny
 			// load soundfiles, dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
-			load_object(DObject, "bunny/bunny.obj", "Cashmere", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/t_bear.obj", "Cashmere", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/t_bear.obj", "Cashmere", 0.3, 0.4, 0.2, 1, cVector3d(1.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/t_bear.obj", "Cashmere", 0.3, 0.4, 0.2, 2, cVector3d(1.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/t_bear.obj", "Cashmere", 0.3, 0.4, 0.2, 3, cVector3d(1.0, 0.0, 0.0));
 			break;
 
 		case 2:	// rock,	granite
@@ -508,22 +511,10 @@ int main(int argc, char* argv[]){
 		//	load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
 		//	break;
 		//*/	
-		case 7:	// ice
-			// dyn_fric = 0.02, stat_fric = 0.03, stiff = 0.8
-			load_object(DObject, "iceCube2/ice.obj", "Foil_isolating", 0.01, 0.01, 0.8, 0, cVector3d(1.0, 0.2, 0.0));
-			//DObject->getChild(0)->setTransparencyLevel(0.2);
-			DObject->setTransparencyLevel(0.2);
-			DObject->setUseTransparency(true,true);
-	
-			break;
-		case 8:	// Teddy
-			// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
-			load_object(DObject, "teddy_bear/t_bear.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
-			load_object(DObject, "teddy_bear/t_bear.obj", "Cork", 0.5, 0.5, 0.6, 1, cVector3d(0.0, 0.0, 0.0));
-			load_object(DObject, "teddy_bear/t_bear.obj", "Cork", 0.5, 0.5, 0.6, 2, cVector3d(0.0, 0.0, 0.0));
-			load_object(DObject, "teddy_bear/t_bear.obj", "Cork", 0.5, 0.5, 0.6, 3, cVector3d(0.0, 0.0, 0.0));
-			break;
-
+		//case 7:	// ice
+		//	// dyn_fric = 0.02, stat_fric = 0.03, stiff = 0.8
+		//	load_object(DObject, "iceCube/icecube.obj", "Foil_isolating", 0.01, 0.01, 0.8, 0, cVector3d(0.0, 0.2, 0.0));
+		//	break;
 			/*
 			case 9:	// (shot) glass
 			// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
@@ -937,15 +928,24 @@ void ChangeSound(int ID){
 	int max_force = 10;
 	double abs_force;
 	double d_veloc;
-	freq=0;
-	cVector3d frequency;
+	double cos_veloc_angle;
+	freq = 0;
+	cVector3d device_veloc, tan_veloc;
 	cVector3d force;
+	cVector3d norm_force;
 
-	force= tool->m_lastComputedGlobalForce;
+	force = tool->m_lastComputedGlobalForce;
+	norm_force = tool->m_proxyPointForceModel->getTangentialForce();
+	//getNormalForce();
+
+	force = tool->m_lastComputedGlobalForce;
 	abs_force = abs(force.length());
 
-	frequency = tool->m_deviceGlobalVel;
-	d_veloc = abs(frequency.length());
+	device_veloc = tool->m_deviceGlobalVel;
+	//d_veloc = abs(frequency.length());
+	                                
+	cos_veloc_angle = (norm_force.dot(device_veloc))/(device_veloc.length()*norm_force.length());
+	tan_veloc = cos_veloc_angle * device_veloc;
 
 	if (d_veloc > 1.5){
 		if (audio_f != 4) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
@@ -1034,7 +1034,7 @@ void gameLogic(void){
 
 			Objects[act_obj]->setShowEnabled(true, true);
 			Objects[act_obj]->setHapticEnabled(true, true);
-			//Objects[act_obj]->setTransparencyLevel(true); bullsh --> double!=bool
+			Objects[act_obj]->setTransparencyLevel(true);
 			break;
 			
 		case 1: // explore the object
@@ -1044,14 +1044,14 @@ void gameLogic(void){
 				Objects[s]->setShowBox(false);
 				Objects[s]->setPos(0,0,0);
 				Objects[s]->setShowEnabled(false, true);
-				//Objects[s]->setTransparencyLevel(0);  
+				Objects[s]->setTransparencyLevel(false);
 			}
 			camera->set( cVector3d (3.0, 0.0, 0.0), cVector3d (0.0, 0.0, 0.0), 	cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
 			
 			realModel = rand() % NumObj; // choose random object
 			Objects[realModel]->setShowEnabled(true, true);
 			Objects[realModel]->setHapticEnabled(true,true);
-			Objects[realModel]->setTransparencyLevel(0);
+			Objects[realModel]->setTransparencyLevel(false);
 			break;
 
 		case 2 : // choose the solution
@@ -1086,14 +1086,12 @@ void gameLogic(void){
 				Objects[multChoice[2]]->setPos(0.0, 2, 0.0);	
 
 				for(int k = 0; k < 3; k++){
-					Objects[multChoice[k]]->setShowEnabled(true,true);
-					Objects[multChoice[k]]->setTransparencyLevel(1);
-					//Objects[multChoice[k]]->setUseTransparency(false, true);
+					Objects[multChoice[k]]->setShowEnabled(true,true);	
+					Objects[multChoice[k]]->setUseTransparency(false, true);
 					Objects[multChoice[k]]->setShowBox(true);
 					Objects[multChoice[k]]->setBoxColor(cColorf(1,0,0,1));
 					distToObj[k] = Objects[multChoice[k]]->getBoundaryMax().distance(Objects[multChoice[k]]->getBoundaryCenter());
 				}
-				Objects[7]->setTransparencyLevel(0.2);
 				camera->set( cVector3d (9.0, 0.0, 0.0), cVector3d (0.0, 0.0, 0.0),cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
 				tool->setWorkspaceRadius(5.0);
 				checkBoxColl = true;
