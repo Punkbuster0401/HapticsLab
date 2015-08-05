@@ -532,7 +532,7 @@ int main(int argc, char* argv[]){
 
 		case 9:	// eraser
 		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		load_object(DObject, "PinkandInk/eraser.obj", "amp_files\rubber_amp", 0.7, 0.7, 0.5, 0, cVector3d(0.2, 0.2, 0));
+		load_object(DObject, "PinkandInk/eraser.obj", "amp_files\rubber_amp", 0.7, 0.7, 0.7, 0, cVector3d(0.2, 0.2, 0));
 		//DObject->setTransparencyLevel(1);
 		break;	
 
@@ -954,7 +954,7 @@ void ChangeSound(int ID){
 	int freq = 0; //0-4
 	int max_force = 10;
 	double abs_force = 0;
-	double d_veloc = 0;
+	double tan_veloc = 0;
 	double cos_veloc_angle = 0;
 	cVector3d device_veloc;
 	cVector3d force;
@@ -975,7 +975,7 @@ void ChangeSound(int ID){
 	//d_veloc = abs(frequency.length());
 	                                
 	cos_veloc_angle = (norm_force.dot(device_veloc))/(device_veloc.length()*norm_force.length());
-	d_veloc = (cos_veloc_angle * device_veloc).length();
+	tan_veloc = (cos_veloc_angle * device_veloc).length();
 
 	if (tan_veloc > 1.5){
 		if (audio_f != 4) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
