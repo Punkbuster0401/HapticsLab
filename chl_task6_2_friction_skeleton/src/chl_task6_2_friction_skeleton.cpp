@@ -108,7 +108,7 @@ vector<cMesh*> Objects;
 
 
 //Set number of Objects
-int NumObj = 11;
+int NumObj = 12;
 int act_obj = 0;
 
 int multChoice[3];
@@ -479,12 +479,12 @@ int main(int argc, char* argv[]){
 
 		case 0: // tooth
 			// load soundfiles, dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8s
-			load_object(DObject, "tooth/tooth.3ds", "Glass", 0.15, 0.2, 0.8, 0, cVector3d(0.0, 0.0, 0.0)); //  
+			load_object(DObject, "tooth/tooth.3ds", "amp_files/ceramik_amp", 0.15, 0.2, 0.8, 0, cVector3d(0.0, 0.0, 0.0)); //  
 			break;
 
 		case 1: // bunny
 			// load soundfiles, dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
-			load_object(DObject, "bunny/bunny.obj", "Cashmere", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
+			load_object(DObject, "bunny/bunny.obj", "amp_files/Cashmere_amp", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
 			break;
 
 		case 2:	// rock,	granite
@@ -494,24 +494,24 @@ int main(int argc, char* argv[]){
 
 		case 3:	// sponge
 			// upper part: dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.1
-			load_object(DObject, "Schwamm/sponge.obj", "Foam_medium", 0.2, 0.25, 0.1, 0, cVector3d(0.2, 0.2, 0.8));
+			load_object(DObject, "Schwamm/sponge.obj", "amp_files/foam_medium_amp2", 0.2, 0.25, 0.1, 0, cVector3d(0.2, 0.2, 0.8));
 			// power part: dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
-			load_object(DObject, "Schwamm/sponge.obj", "Foam_medium", 0.3, 0.4, 0.2, 1, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "Schwamm/sponge.obj", "amp_files/foam_medium_amp2", 0.3, 0.4, 0.2, 1, cVector3d(0.0, 0.0, 0.0));
 			break;
 
 		case 4:	// rock, sandstone	
 			// dyn_fric = 0.4, stat_fric = 0.51, stiff = 0.6
-			load_object(DObject, "Stone/sand_stone.obj", "stone_tile", 0.4, 0.51, 0.6, 0, cVector3d(0.0, 0.0, 0.8));
+			load_object(DObject, "Stone/sand_stone.obj", "StoneTileVersion2", 0.4, 0.51, 0.6, 0, cVector3d(0.0, 0.0, 0.8));
 			break;
 
 		 case 5:	 // Cork
 			 // dyn_fric = 0.5, stat_fric = 0.5, stiff = ??
-			load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
+			load_object(DObject, "Cork/cork.obj", "amp_files/Cork_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
 			break;	 	
 			
 		case 6:	// paper Cup
 			// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
-			load_object(DObject, "paperCup/paper_cup_final.obj", "amp_files/paper_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "paperCup/paper_cup_final.obj", "amp_files/paper_amp2", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
 			break;
 
 		//	/* case 7:	// bottle
@@ -521,7 +521,7 @@ int main(int argc, char* argv[]){
 		//*/	
 		case 7:	// ice
 			// dyn_fric = 0.02, stat_fric = 0.03, stiff = 0.8
-			load_object(DObject, "iceCube2/ice.obj", "Foil_isolating", 0.01, 0.01, 0.8, 0, cVector3d(1.0, 0.2, 0.0));
+			load_object(DObject, "iceCube2/ice.obj", "amp_files/plastic_amp", 0.01, 0.01, 0.9, 0, cVector3d(1.0, 0.2, 0.0));
 			//DObject->getChild(0)->setTransparencyLevel(0.2);
 			DObject->setTransparencyLevel(0.2);
 			DObject->setUseTransparency(true,true);
@@ -529,24 +529,28 @@ int main(int argc, char* argv[]){
 			break;
 		case 8:	// Teddy
 			// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
-			load_object(DObject, "teddy_bear/teddy.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
-			load_object(DObject, "teddy_bear/teddy.obj", "Cork", 0.5, 0.5, 0.6, 1, cVector3d(0.0, 0.0, 0.0));
-			load_object(DObject, "teddy_bear/teddy.obj", "Cork", 0.5, 0.5, 0.6, 2, cVector3d(0.0, 0.0, 0.0));
-			load_object(DObject, "teddy_bear/teddy.obj", "Cork", 0.5, 0.5, 0.6, 3, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/carpet_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/carpet_amp", 0.5, 0.5, 0.6, 1, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/carpet_amp", 0.5, 0.5, 0.6, 2, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/carpet_amp", 0.5, 0.5, 0.6, 3, cVector3d(0.0, 0.0, 0.0));
 			break;
 
 		case 9:	// eraser
-		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		load_object(DObject, "PinkandInk/eraser.obj", "amp_files\rubber_amp", 0.7, 0.7, 0.7, 0, cVector3d(0.2, 0.2, 0));
-		//DObject->setTransparencyLevel(1);
+			// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
+			load_object(DObject, "PinkandInk/eraser.obj", "amp_files/rubber_amp2", 0.7, 0.7, 0.7, 0, cVector3d(0.0, 0.3, 0.1));
+			//DObject->setTransparencyLevel(1);
 		break;	
 
-
 		case 10:	// (shot) glass
-		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
-		//DObject->setTransparencyLevel(1);
-		break;	 	
+			// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
+			load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.1, 0.15, 0.9, 0, cVector3d(0.0, 0.0, 0.0));
+			//DObject->setTransparencyLevel(1);
+		break;	
+
+		case 11: // box
+			// load soundfiles, dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8s
+			load_object(DObject, "Boxes/Box1.obj", "amp_files/beech_amp", 0.3, 0.4, 0.8, 0, cVector3d(0.0, 0.0, 0.0)); //  
+			break;
 
 		} // end of case statement
 		
@@ -777,7 +781,9 @@ void keySelect(unsigned char key, int x, int y){
 			break;
 
 		case 's':
-			use_max_force=!use_max_force;
+			use_max_force = !use_max_force;
+			if (use_max_force == true) cout << "Voice coil actuator always plays on full volume." << endl;
+			else cout << "Voice coil actuator volume depends on penetration depth." << endl;
 			break;	
 
 		case 'r':
