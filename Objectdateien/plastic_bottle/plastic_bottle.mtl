@@ -1,0 +1,11 @@
+# Blender MTL File: 'plastic_bottle.blend'
+# Material Count: 1
+
+newmtl Ceram
+Ns 96.078431
+Ka 0.000000 0.000000 0.000000
+Kd 0.395294 0.461176 0.743529
+Ks 0.043137 0.043137 0.043137
+Ni 1.000000
+d 1.000000
+illum 2
