@@ -331,15 +331,15 @@ int main(int argc, char* argv[]){
 	light->setEnabled(true);                   // enable light source
 	light->setPos(cVector3d( 2.0, 0.5, 1.0));  // position the light source
 	light->setDir(cVector3d(-2.0, 0.5, 1.0));  // define the direction of the light beam
-	light2->setEnabled(true);                   // enable light source
-	light2->setPos(cVector3d( 0.0, 2.0, 2.0));  // position the light source
-	light2->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
-	light3->setEnabled(true);                   // enable light source
-	light3->setPos(cVector3d( 0.0, -2.0, 2.0));  // position the light source
-	light3->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
-	light4->setEnabled(true);                   // enable light source
-	light4->setPos(cVector3d( 0.0, 0.0, 2.0));  // position the light source
-	light4->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
+	//light2->setEnabled(true);                   // enable light source
+	//light2->setPos(cVector3d( 0.0, 2.0, 2.0));  // position the light source
+	//light2->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
+	//light3->setEnabled(true);                   // enable light source
+	//light3->setPos(cVector3d( 0.0, -2.0, 2.0));  // position the light source
+	//light3->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
+	//light4->setEnabled(true);                   // enable light source
+	//light4->setPos(cVector3d( 0.0, 0.0, 2.0));  // position the light source
+	//light4->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
 
 	//Objects[multChoice[0]]->setPos(0.0, -2, 0.0);
 
