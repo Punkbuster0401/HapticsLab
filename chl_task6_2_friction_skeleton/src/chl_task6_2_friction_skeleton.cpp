@@ -58,7 +58,7 @@ using namespace std;
 //---------------------------------------------------------------------------
 //							DECLARED VARIABLES
 //---------------------------------------------------------------------------
-bool b_timing = TRUE;
+bool b_timing = false;
 
 
 // a world that contains all objects of the virtual environment
@@ -455,6 +455,7 @@ int main(int argc, char* argv[]){
 	mat.m_diffuse.set(0.8, 0.8, 0.8);
 	mat.m_specular.set(1.0, 1.0, 1.0);
 
+	cout << "Loading objects";
 	// switch chooses the correct object and sets the attributes of the object
 	for(int it=0;it<NumObj;it++){
 		cMesh *DObject = new cMesh(world);
@@ -466,11 +467,13 @@ int main(int argc, char* argv[]){
 		DObject->setPos(0.0, 0.0, 0.0);
 		DObject->setTag(it);
 
+		cout << ".";
+
 		switch(it){ // set object specific properties
 
 		case 0: // tooth
 			// load soundfiles, dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8s
-			load_object(DObject, "tooth/tooth.3ds", "Glass", 0.15, 0.2, 0.8, 0, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "tooth/tooth.3ds", "Glass", 0.15, 0.2, 0.8, 0, cVector3d(0.0, 0.0, 0.0)); //  
 			break;
 
 		case 1: // bunny
@@ -492,7 +495,7 @@ int main(int argc, char* argv[]){
 
 		case 4:	// rock, sandstone	
 			// dyn_fric = 0.4, stat_fric = 0.51, stiff = 0.6
-			load_object(DObject, "Stone/sand_stone.obj", "stone_tile", 0.4, 0.51, 0.6, 0, cVector3d(0.0, 0.0, 0.8));
+			load_object(DObject, "Stone/Rock_rough.obj", "stone_tile", 0.4, 0.51, 0.6, 0, cVector3d(0.0, 0.0, 0.8));
 			break;
 
 		 case 5:	 // Cork
@@ -526,12 +529,18 @@ int main(int argc, char* argv[]){
 			load_object(DObject, "teddy_bear/teddy.obj", "Cork", 0.5, 0.5, 0.6, 3, cVector3d(0.0, 0.0, 0.0));
 			break;
 
-			
-		case 9:	// (shot) glass
+		case 9:	// eraser
 		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+		load_object(DObject, "PinkandInk/eraser.obj", "amp_files\rubber_amp", 0.7, 0.7, 0.5, 0, cVector3d(0.2, 0.2, 0));
 		//DObject->setTransparencyLevel(1);
-		break;	 	
+		break;	
+
+
+		//case 10:	// (shot) glass
+		//// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
+		//load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+		////DObject->setTransparencyLevel(1);
+		//break;	 	
 
 		} // end of case statement
 		
@@ -558,6 +567,8 @@ int main(int argc, char* argv[]){
 		//TODO Ghost objects
 
 	}
+	cout << endl;
+
 	BASS_ChannelPlay(Objects[1]->finalStream[4],TRUE);
 
 	//for(int NP=0;NP<4;NP++) cout<< "loading objects" << Objects[NP]->m_tag <<endl;
@@ -941,13 +952,12 @@ void ChangeSound(int ID){
 	//define maximum depth and maximum volume for material
 	/*static const depth_max = 10;
 	static const max_vol_material;*/
-	int freq; //0-4
+	int freq = 0; //0-4
 	int max_force = 10;
-	double abs_force;
-	double d_veloc;
-	double cos_veloc_angle;
-	freq = 0;
-	cVector3d device_veloc, tan_veloc;
+	double abs_force = 0;
+	double d_veloc = 0;
+	double cos_veloc_angle = 0;
+	cVector3d device_veloc;
 	cVector3d force;
 	cVector3d norm_force;
 
@@ -962,7 +972,7 @@ void ChangeSound(int ID){
 	//d_veloc = abs(frequency.length());
 	                                
 	cos_veloc_angle = (norm_force.dot(device_veloc))/(device_veloc.length()*norm_force.length());
-	tan_veloc = cos_veloc_angle * device_veloc;
+	d_veloc = (cos_veloc_angle * device_veloc).length();
 
 	if (d_veloc > 1.5){
 		if (audio_f != 4) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
