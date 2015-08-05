@@ -166,6 +166,7 @@ bool b_end;
 bool nr_input_el = true;
 int inp_nr = 5;
 int nr_of_games = 5;
+bool use_max_force=false;
 
 clock_t t_begin, t_end;
 int current_state;
@@ -771,9 +772,7 @@ void keySelect(unsigned char key, int x, int y){
 			break;
 
 		case 's':
-			cout<< "go to solution" << current_state << endl;
-			current_state = 2;
-			gameLogic();
+			use_max_force=!use_max_force;
 			break;	
 
 		case 'r':
@@ -966,39 +965,43 @@ void ChangeSound(int ID){
 	//getNormalForce();
 
 	force = tool->m_lastComputedGlobalForce;
-	abs_force = abs(force.length());
+	
+	if(use_max_force)	abs_force=max_force;
+	else abs_force = force.length();
+
 
 	device_veloc = tool->m_deviceGlobalVel;
+	//device_veloc =tool->m_deviceLocalVel;
 	//d_veloc = abs(frequency.length());
 	                                
 	cos_veloc_angle = (norm_force.dot(device_veloc))/(device_veloc.length()*norm_force.length());
 	d_veloc = (cos_veloc_angle * device_veloc).length();
 
-	if (d_veloc > 1.5){
+	if (tan_veloc > 1.5){
 		if (audio_f != 4) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
 		BASS_ChannelSetAttribute(Objects[ID]->finalStream[4], 	BASS_ATTRIB_VOL, abs_force/max_force);
 		BASS_ChannelPlay(Objects[ID]->finalStream[4],FALSE);
 		audio_f = 4;
 	}
-	else if (d_veloc > 0.75){
+	else if (tan_veloc > 0.75){
 		if (audio_f != 3) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
 		BASS_ChannelSetAttribute(Objects[ID]->finalStream[3], 	BASS_ATTRIB_VOL, abs_force/max_force);
 		BASS_ChannelPlay(Objects[ID]->finalStream[3],FALSE);
 		audio_f = 3;
 	}
-	else if (d_veloc > 0.5){
+	else if (tan_veloc > 0.5){
 		if (audio_f != 2) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
 		BASS_ChannelSetAttribute(Objects[ID]->finalStream[2], 	BASS_ATTRIB_VOL, abs_force/max_force);
 		BASS_ChannelPlay(Objects[ID]->finalStream[2],FALSE);
 		audio_f = 2;
 	}
-	else if (d_veloc > 0.25){
+	else if (tan_veloc > 0.25){
 		if (audio_f != 1) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
 		BASS_ChannelSetAttribute(Objects[ID]->finalStream[1], 	BASS_ATTRIB_VOL, abs_force/max_force);
 		BASS_ChannelPlay(Objects[ID]->finalStream[1],FALSE);
 		audio_f = 1;
 	}
-	else if (d_veloc > 0.1){
+	else if (tan_veloc > 0.1){
 		if (audio_f != 0) BASS_ChannelStop(Objects[LastID]->finalStream[audio_f]);
 		BASS_ChannelSetAttribute(Objects[ID]->finalStream[0], 	BASS_ATTRIB_VOL, abs_force/max_force);
 		BASS_ChannelPlay(Objects[ID]->finalStream[0],FALSE);
@@ -1125,6 +1128,7 @@ void gameLogic(void){
 					Objects[multChoice[k]]->setHapticEnabled(false,true);
 				}
 				Objects[7]->setTransparencyLevel(0.2);
+				
 				camera->set( cVector3d (9.0, 0.0, 0.0), cVector3d (0.0, 0.0, 0.0),cVector3d (0.0, 0.0, 1.0));   // direction of the "up" vector
 				tool->setWorkspaceRadius(5.0);
 				checkBoxColl = true;
