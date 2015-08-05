@@ -108,7 +108,7 @@ vector<cMesh*> Objects;
 
 
 //Set number of Objects
-int NumObj = 10;
+int NumObj = 11;
 int act_obj = 0;
 
 int multChoice[3];
@@ -341,6 +341,11 @@ int main(int argc, char* argv[]){
 	//light4->setPos(cVector3d( 0.0, 0.0, 2.0));  // position the light source
 	//light4->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
 
+	light->setDirectionalLight(false);
+	light2->setDirectionalLight(false);
+	light3->setDirectionalLight(false);
+	light4->setDirectionalLight(false);
+
 	//Objects[multChoice[0]]->setPos(0.0, -2, 0.0);
 
 	//-----------------------------------------------------------------------
@@ -496,7 +501,7 @@ int main(int argc, char* argv[]){
 
 		case 4:	// rock, sandstone	
 			// dyn_fric = 0.4, stat_fric = 0.51, stiff = 0.6
-			load_object(DObject, "Stone/Rock_rough.obj", "stone_tile", 0.4, 0.51, 0.6, 0, cVector3d(0.0, 0.0, 0.8));
+			load_object(DObject, "Stone/sand_stone.obj", "stone_tile", 0.4, 0.51, 0.6, 0, cVector3d(0.0, 0.0, 0.8));
 			break;
 
 		 case 5:	 // Cork
@@ -537,11 +542,11 @@ int main(int argc, char* argv[]){
 		break;	
 
 
-		//case 10:	// (shot) glass
-		//// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		//load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
-		////DObject->setTransparencyLevel(1);
-		//break;	 	
+		case 10:	// (shot) glass
+		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
+		load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+		//DObject->setTransparencyLevel(1);
+		break;	 	
 
 		} // end of case statement
 		
