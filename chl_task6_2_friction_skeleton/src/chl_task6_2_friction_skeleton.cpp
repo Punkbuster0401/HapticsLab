@@ -108,7 +108,7 @@ vector<cMesh*> Objects;
 
 
 //Set number of Objects
-int NumObj = 12;
+int NumObj = 13;
 int act_obj = 0;
 
 int multChoice[3];
@@ -536,7 +536,7 @@ int main(int argc, char* argv[]){
 		//*/	
 		case 7:	// ice
 			// dyn_fric = 0.02, stat_fric = 0.03, stiff = 0.8
-			load_object(DObject, "iceCube2/ice.obj", "Foil_isolating", 0.01, 0.01, 0.8, 0, cVector3d(1.0, 0.2, 0.0));
+			load_object(DObject, "iceCube2/ice.obj", "Foil_isolating", 0.01, 0.01, 0.9, 0, cVector3d(1.0, 0.2, 0.0));
 			//DObject->getChild(0)->setTransparencyLevel(0.2);
 			DObject->setTransparencyLevel(0.2);
 			DObject->setUseTransparency(true,true);
@@ -552,14 +552,14 @@ int main(int argc, char* argv[]){
 
 		case 9:	// eraser
 		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		load_object(DObject, "PinkandInk/eraser.obj", "amp_files\rubber_amp", 0.7, 0.7, 0.7, 0, cVector3d(0.2, 0.2, 0));
+		load_object(DObject, "PinkandInk/eraser.obj", "amp_files/rubber_amp", 0.7, 0.7, 0.7, 0, cVector3d(0.2, 0.2, 0));
 		//DObject->setTransparencyLevel(1);
 		break;	
 
 
 		case 10:	// (shot) glass
 		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+		load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.01, 0.015, 0.9, 0, cVector3d(0.0, 0.0, 0.0));
 		//DObject->setTransparencyLevel(1);
 		break;	 
 
@@ -569,6 +569,11 @@ int main(int argc, char* argv[]){
 		//load_object(DObject, "plastic_bottle/ottle.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
 		//DObject->setTransparencyLevel(1);
 		break;	 	
+
+		case 12: // box
+			// load soundfiles, dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8s
+			load_object(DObject, "Boxes/Box1.obj", "amp_files/beech_amp", 0.3, 0.4, 0.8, 0, cVector3d(0.0, 0.0, 0.0)); //  
+			break;
 
 		} // end of case statement
 		
@@ -802,6 +807,8 @@ void keySelect(unsigned char key, int x, int y){
 
 		case 's':
 			use_max_force=!use_max_force;
+			if (use_max_force == true) cout << "Voice coil actuator always plays on full volume." << endl;
+			else cout << "Voice coil actuator volume depends on penetration depth." << endl;
 			break;	
 
 		case 'r':
@@ -828,6 +835,13 @@ void keySelect(unsigned char key, int x, int y){
 			//cout<< "next" << current_state  <<endl;
 			if((current_state == 0) && (act_obj < (NumObj - 1))) act_obj++;
 			gameLogic();
+			break;
+
+		case 'f':
+			//cout<< "next" << current_state  <<endl;
+			ch_useForceShading = !ch_useForceShading; 
+			if (ch_useForceShading == true) cout << "Force shading is active." << endl;
+			else cout << "Force shading is NOT active." << endl;
 			break;
 
 		case 13:
@@ -917,7 +931,11 @@ void updateHaptics(void){
 		tool->updatePose();			
 		// compute interaction forces
 		//if(useFriction) 
-		((ch_generic3dofPointer*)tool)->computeInteractionForcesD();
+
+		if (ch_useForceShading == true) ((ch_generic3dofPointer*)tool)->computeInteractionForcesD();
+		else ((ch_generic3dofPointer*)tool)->computeInteractionForces(); // D
+
+		//((ch_generic3dofPointer*)tool)->computeInteractionForcesD();
 		//tool->computeInteractionForces();
 		//else tool->computeInteractionForces();
 
