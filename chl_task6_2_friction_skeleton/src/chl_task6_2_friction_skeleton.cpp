@@ -37,6 +37,7 @@ last revision: 07.06.2010*/
 #include <ctime>
 //#include <CMesh.h>
 
+
 //---------------------------------------------------------------------------
 #include "ch_generic3dofPointer.h"
 //---------------------------------------------------------------------------
@@ -72,6 +73,7 @@ cLight *light;
 cLight *light2;
 cLight *light3;
 cLight *light4;
+
 
 // a little "chai3d" bitmap logo at the bottom of the screen
 cBitmap* logo;
@@ -144,7 +146,8 @@ string resourceRoot;
 
 // has exited haptics simulation thread
 bool simulationFinished = false;
-
+// frequency counter to measure the simulation haptic rate
+//cFrequencyCounter frequencyCounter;
 
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -156,9 +159,7 @@ int audio_f = 0;
 bool fileload;
 string texture, t_ctr, t_path, f_obj;
 long double t_val;
-int freq; //0-4
-cVector3d frequency;
-cVector3d force;
+
 static const int numStreams=5;
 int LastID;
 void StartPlayback(cMesh* Obj);
@@ -173,6 +174,20 @@ int current_state;
 // haptics loop
 cMesh* ContObject;
 cGenericObject* GObject; 
+
+//define maximum depth and maximum volume for material
+/*static const depth_max = 10;
+static const max_vol_material;*/
+int freq = 0; //0-4
+int max_force = 5;
+double abs_force = 0;
+double tan_veloc = 0;
+double cos_veloc_angle = 0;
+cVector3d device_veloc;
+cVector3d force;
+cVector3d norm_force;
+
+
 //---------------------------------------------------------------------------
 //							DECLARED MACROS
 //---------------------------------------------------------------------------
@@ -215,7 +230,7 @@ double stiffnessMax;
 
 // set static and dynamic friction coefficients for the object, propagating 
 // them to the children
-void load_object(cMesh *DObject, string f_obj, string texture, double stat_fric, double dyn_fric, double stiffness, int numChild, cVector3d cvd = cVector3d(1.0, 0.0, 0.0));
+void load_object(cMesh *DObject, string f_obj, string texture, double stat_fric, double dyn_fric, double stiffness,cVector3d cvd = cVector3d(1.0, 0.0, 0.0));
 
 // modify sound according to user action
 void ChangeSound(int ID);
@@ -326,24 +341,41 @@ int main(int argc, char* argv[]){
 	// enable high quality rendering when DObject becomes transparent
 	camera->enableMultipassTransparency(true);
 
+	 // create a font
+    cFont *font;   
+	// a label to display the rate [Hz] at which the simulation is running
+	cLabel* labelHapticRate;
+
+	// create a label to display the haptic rate of the simulation
+    labelHapticRate = new cLabel();
+	camera->m_front_2Dscene.addChild(labelHapticRate);
+    //camera->m_frontLayer->addChild(labelHapticRate);
+    //labelHapticRate->m_fontColor.setBlack();
+	labelHapticRate->m_fontColor=cColorf(0,0,0,1);
+
+	
+
 	// create a light source and attach it to the camera
+	
 	light = new cLight(world);
 	//light2 = new cLight(world);
 	//light3 = new cLight(world);
 	//light4 = new cLight(world);
 	camera->addChild(light);                   // attach light to camera
 	light->setEnabled(true);                   // enable light source
-	light->setPos(cVector3d( 2.0, 0.5, 1.0));  // position the light source
-	light->setDir(cVector3d(-2.0, 0.5, 1.0));  // define the direction of the light beam
+	light->setPos(cVector3d( 0.0, 0.0, 20.0));  // position the light source
+	light->setDir(cVector3d(0.0, 0.0, 0.0));  // define the direction of the light beam
 	//light2->setEnabled(true);                   // enable light source
-	//light2->setPos(cVector3d( 0.0, 2.0, 2.0));  // position the light source
-	//light2->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
+	//light2->setPos(cVector3d( -4.0, 0.0, 5.0));  // position the light source
+	//light2->setDir(cVector3d(1.0, 0.0, -1.0));  // define the direction of the light beam
 	//light3->setEnabled(true);                   // enable light source
 	//light3->setPos(cVector3d( 0.0, -2.0, 2.0));  // position the light source
 	//light3->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
 	//light4->setEnabled(true);                   // enable light source
 	//light4->setPos(cVector3d( 0.0, 0.0, 2.0));  // position the light source
 	//light4->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
+	//light->set
+	light->setShowBox(true);
 
 	//light->setDirectionalLight(false);
 	//light2->setDirectionalLight(false);
@@ -461,8 +493,8 @@ int main(int argc, char* argv[]){
 
 	//Materials
 	cMaterial mat, mat_tooth, mat_rabbit;
-	mat.m_ambient.set(1, 0.5, 0.5);
-	mat.m_diffuse.set(0.0, 0.8, 0.2);
+	mat.m_ambient.set(1, 1, 1);
+	mat.m_diffuse.set(1, 1, 1);
 	mat.m_specular.set(1.0, 1.0, 1.0);
 
 	cout << "Loading objects ";
@@ -483,14 +515,14 @@ int main(int argc, char* argv[]){
 
 		case 0: // tooth
 			// load soundfiles, dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8s
-			load_object(DObject, "tooth/tooth.3ds", "amp_files/ceramik_amp", 0.15, 0.2, 0.8, 0, cVector3d(0.0, 0.0, 0.0)); //  
+			load_object(DObject, "tooth/tooth.3ds", "amp_files/ceramik_amp", 0.15, 0.2, 0.8, cVector3d(0.0, 0.0, 0.0)); //  
 			
 				//load_object(DObject, "Schwamm/sponge.obj", "Cashmere", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
 			//load_object(DObject, "tooth/tooth.3ds", "Glass", 0.15, 0.2, 0.8, 1, cVector3d(0.0, 0.0, 0.0)); //  
 			//DObject->m_material.setStiffness(0.8*stiffnessMax);
 			
 			
-			mat_tooth.m_ambient.set(1, 0.5, 0.5);
+			mat_tooth.m_ambient.set(0.3, 1, 1);
 			mat_tooth.m_diffuse.set(0.5, 0.8, 0.2);
 			mat_tooth.m_specular.set(1.0, 1.0, 1.0);
 
@@ -509,35 +541,35 @@ int main(int argc, char* argv[]){
 
 		case 1: // bunny
 			// load soundfiles, dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
-			load_object(DObject, "bunny/bunny.obj", "amp_files/carpet_amp", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
+			load_object(DObject, "bunny/bunny.obj", "amp_files/carpet_amp", 0.3, 0.4, 0.2,  cVector3d(1.0, 0.0, 0.0));
 			break;
 
 		case 2:	// rock, granite
 			// dyn_fric = 0.3, stat_fric = 0.43, stiff = 0.6
-			load_object(DObject, "Stone/Rock1.obj", "stone_tile", 0.3, 0.43, 0.6, 0, cVector3d(0.0, 0.0, 0.8));	
+			load_object(DObject, "Stone/Rock1.obj", "stone_tile", 0.3, 0.43, 0.6, cVector3d(0.0, 0.0, 0.8));	
 			DObject->getChild(0)->m_material.m_diffuse=cColorf(1,0.5,0.3,1);		
 			break;
 
 		case 3:	// sponge
 			// upper part: dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.1
-			load_object(DObject, "Schwamm/sponge.obj", "amp_files/foam_medium_amp", 0.2, 0.25, 0.1, 0, cVector3d(0.2, 0.2, 0.8));
+			load_object(DObject, "Schwamm/sponge.obj", "amp_files/foam_medium_amp", 0.2, 0.25, 0.1,  cVector3d(0.2, 0.2, 0.8));
 			// power part: dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
-			load_object(DObject, "Schwamm/sponge.obj", "amp_files/foam_medium_amp", 0.3, 0.4, 0.2, 1, cVector3d(0.0, 0.0, 0.0));
+			//load_object(DObject, "Schwamm/sponge.obj", "amp_files/foam_medium_amp", 0.3, 0.4, 0.2, 1, cVector3d(0.0, 0.0, 0.0));
 			break;
 
 		case 4:	// rock, sandstone	
 			// dyn_fric = 0.4, stat_fric = 0.51, stiff = 0.6
-			load_object(DObject, "Stone/sand_stone.obj", "stone_tile", 0.4, 0.51, 0.6, 0, cVector3d(0.0, 0.0, 0.8));
+			load_object(DObject, "Stone/sand_stone.obj", "stone_tile", 0.4, 0.51, 0.6,  cVector3d(0.0, 0.0, 0.8));
 			break;
 
 		 case 5:	 // Cork
 			 // dyn_fric = 0.5, stat_fric = 0.5, stiff = ??
-			load_object(DObject, "Cork/cork.obj", "amp_files/Cork_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
+			load_object(DObject, "Cork/cork.obj", "amp_files/Cork_amp", 0.5, 0.5, 0.6,  cVector3d(0.0, 0.0, 1.0));
 			break;	 	
 			
 		case 6:	// paper Cup
 			// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
-			load_object(DObject, "paperCup/paper_cup_final.obj", "amp_files/paper_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "paperCup/paper_cup_final.obj", "amp_files/paper_amp", 0.5, 0.5, 0.6,  cVector3d(0.0, 0.0, 0.0));
 			break;
 
 		//	/* case 7:	// bottle
@@ -547,7 +579,7 @@ int main(int argc, char* argv[]){
 		//*/	
 		case 7:	// ice
 			// dyn_fric = 0.02, stat_fric = 0.03, stiff = 0.8
-			load_object(DObject, "iceCube2/ice.obj", "amp_files/foil_amp", 0.01, 0.01, 0.9, 0, cVector3d(1.0, 0.2, 0.0));
+			load_object(DObject, "iceCube2/ice.obj", "amp_files/foil_amp", 0.01, 0.01, 0.9,  cVector3d(1.0, 0.2, 0.0));
 			//DObject->getChild(0)->setTransparencyLevel(0.2);
 			DObject->setTransparencyLevel(0.2);
 			DObject->setUseTransparency(true, true);
@@ -555,35 +587,41 @@ int main(int argc, char* argv[]){
 			break;
 		case 8:	// Teddy
 			// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
-			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/Cashmere_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
-			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/Cashmere_amp", 0.5, 0.5, 0.6, 1, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/Cashmere_amp", 0.5, 0.5, 0.6,  cVector3d(0.0, 0.0, 0.0));
+			/*load_object(DObject, "teddy_bear/teddy.obj", "amp_files/Cashmere_amp", 0.5, 0.5, 0.6, 1, cVector3d(0.0, 0.0, 0.0));
 			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/Cashmere_amp", 0.5, 0.5, 0.6, 2, cVector3d(0.0, 0.0, 0.0));
-			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/Cashmere_amp", 0.5, 0.5, 0.6, 3, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/Cashmere_amp", 0.5, 0.5, 0.6, 3, cVector3d(0.0, 0.0, 0.0));*/
 			break;
 
 		case 9:	// eraser
 		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		load_object(DObject, "PinkandInk/eraser.obj", "amp_files/rubber_amp", 0.7, 0.7, 0.7, 0, cVector3d(0.2, 1.0, 0));
+		load_object(DObject, "PinkandInk/eraser.obj", "amp_files/rubber_amp", 0.7, 0.7, 0.7,  cVector3d(0.2, 1.0, 0));
 		//DObject->setTransparencyLevel(1);
 		break;	
 
 
 		case 10:	// (shot) glass
 		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.01, 0.015, 0.9, 0, cVector3d(0.0, 0.0, 0.0));
+		load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.01, 0.015, 0.9, cVector3d(0.0, 0.0, 0.0));
 		//DObject->setTransparencyLevel(1);
 		break;	 
 
 		case 11:	// plastic bottle
 		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		load_object(DObject, "plastic_bottle/plastic_bottle.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+		load_object(DObject, "plastic_bottle/plastic_bottle.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6,  cVector3d(0.0, 0.0, 0.0));
 		//load_object(DObject, "plastic_bottle/ottle.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
 		//DObject->setTransparencyLevel(1);
 		break;	 	
 
 		case 12: // box
 			// load soundfiles, dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8s
-			load_object(DObject, "Boxes/Box1.obj", "amp_files/beech_amp", 0.3, 0.4, 0.8, 0, cVector3d(0.0, 0.0, 0.0)); //  
+			load_object(DObject, "Wooden Box/box_or.obj", "amp_files/beech_amp", 0.3, 0.4, 0.8,cVector3d(1.0, 0.0, 0.0)); // 
+			//load_object(DObject, "Wooden Box/box_or.obj", "amp_files/beech_amp", 0.3, 0.4, 0.8, 1, cVector3d(0.0, 0.0, 0.0)); // 
+			//load_object(DObject, "Wooden Box/box_or.obj", "amp_files/beech_amp", 0.3, 0.4, 0.8, 2, cVector3d(0.0, 0.0, 0.0)); // 
+			//load_object(DObject, "Wooden Box/box_or.obj", "amp_files/beech_amp", 0.3, 0.4, 0.8, 3, cVector3d(0.0, 0.0, 0.0)); // 
+			//load_object(DObject, "Wooden Box/box_or.obj", "amp_files/beech_amp", 0.3, 0.4, 0.8, 4, cVector3d(0.0, 0.0, 0.0)); // 
+			//load_object(DObject, "Wooden Box/box_or.obj", "amp_files/beech_amp", 0.3, 0.4, 0.8, 5, cVector3d(0.0, 0.0, 0.0)); // 
+			//cout <<DObject->getNumChildren()<< endl;
 			break;
 
 		} // end of case statement
@@ -612,8 +650,7 @@ int main(int argc, char* argv[]){
 		//cout <<DObject->getNumChildren()<< endl;
 	}
 	cout << endl;
-
-	BASS_ChannelPlay(Objects[1]->finalStream[4],TRUE);
+	
 
 	//for(int NP=0;NP<4;NP++) cout<< "loading objects" << Objects[NP]->m_tag <<endl;
 	// create a new mesh.
@@ -934,10 +971,16 @@ void updateHaptics(void){
 	// turn off friction (the original Chai3d friction implementation!)
 	tool->m_proxyPointForceModel->m_useFriction = false;
 
+
+
+
 	// main haptic simulation loop
 	while(simulationRunning){
 		if(b_timing){ if(timing_ctr == 0){ t_begin = clock();}}
 		timing_ctr++;
+
+		 
+
 		// update position and orientation of tool
 		tool->updatePose();			
 		// compute interaction forces
@@ -1008,17 +1051,7 @@ void ChangeSound(int ID){
 	// doku: http://www.bass.radio42.com/help/html/f00d6245-b20b-f37d-7982-8cc6549f4ae3.htm
 	// http://www.bass.radio42.com/help/html/937729d8-fb7a-497d-a1d5-951f42873d58.htm
 	
-	//define maximum depth and maximum volume for material
-	/*static const depth_max = 10;
-	static const max_vol_material;*/
-	int freq = 0; //0-4
-	int max_force = 10;
-	double abs_force = 0;
-	double tan_veloc = 0;
-	double cos_veloc_angle = 0;
-	cVector3d device_veloc;
-	cVector3d force;
-	cVector3d norm_force;
+	
 
 	force = tool->m_lastComputedGlobalForce;
 	norm_force = tool->m_proxyPointForceModel->getTangentialForce();
@@ -1076,12 +1109,13 @@ void ChangeSound(int ID){
 *	Loads the object into workspace
 *	if there are multiple children function need to be called for every children with the appropriate children number
 */
-void load_object(cMesh *DObject, string f_obj, string i_texture, double i_dyn_fric, double i_stat_fric, double i_stiffness, int numChild, cVector3d cvd){
+void load_object(cMesh *DObject, string f_obj, string i_texture, double i_dyn_fric, double i_stat_fric, double i_stiffness,cVector3d cvd){
 	// 1) load object
 	// 2) set material (friction, stiffness, ...)
 	// 3) load sound files
 	// 4) scale and rotate the object
-	if (numChild == 0){
+	//if (numChild == 0){
+	int numChild;
 		t_path = "resources/models/" + f_obj;
 		fileload = DObject->loadFromFile(RESOURCE_PATH(t_path));
 		for(int sf=0;sf<5;sf++){
@@ -1090,11 +1124,16 @@ void load_object(cMesh *DObject, string f_obj, string i_texture, double i_dyn_fr
 			t_path = "resources/sounds/oneSec/" + i_texture + "/f" + t_ctr + ".wav";
 			DObject->finalStream[sf]=BASS_StreamCreateFile(FALSE,RESOURCE_PATH(t_path),0,0,0);
 		}
-		DObject->rotate(cvd, cDegToRad(90));
+	DObject->rotate(cvd, cDegToRad(90));
+	numChild=DObject->getNumChildren();
+	//}
+
+	for(int it=0;it <numChild;it++){
+		DObject->getChild(it)->m_material.setDynamicFriction(i_dyn_fric);
+		DObject->getChild(it)->m_material.setStaticFriction(i_stat_fric);
+		DObject->getChild(it)->m_material.setStiffness(i_stiffness*stiffnessMax);	
+		DObject->getChild(it)->m_material.m_ambient=cColorf(1, 1, 1);
 	}
-	DObject->getChild(numChild)->m_material.setDynamicFriction(i_dyn_fric);
-	DObject->getChild(numChild)->m_material.setStaticFriction(i_stat_fric);
-	DObject->getChild(numChild)->m_material.setStiffness(i_stiffness*stiffnessMax);	
 }
 
 //---------------------------------------------------------------------------
