@@ -60,7 +60,7 @@ using namespace std;
 //---------------------------------------------------------------------------
 bool b_timing = false;
 
-
+bool ch_useForceShading = true;
 // a world that contains all objects of the virtual environment
 cWorld* world;
 
@@ -108,7 +108,7 @@ vector<cMesh*> Objects;
 
 
 //Set number of Objects
-int NumObj = 12;
+int NumObj = 13;
 int act_obj = 0;
 
 int multChoice[3];
@@ -262,28 +262,32 @@ int main(int argc, char* argv[]){
 	printf ("\n\n");*/
 	printf ("\n");
 	printf ("Computational Haptics Lab SOSE 2015 - Final Project \n");
+	printf ("###################################################################### \n");
+	printf ("###################################################################### \n");
+	printf ("########################### Haptic Memory ############################ \n");
+	printf ("###################################################################### \n");
+	printf ("###################################################################### \n");
 	printf ("by Marc Dreiser and Julian Eiler\n\n");
-	printf ("###################################################################### \n");
-	printf ("###################################################################### \n");
-	printf ("#################### Haptic Model Detect Quizgame #################### \n");
-	printf ("###################################################################### \n");
-	printf ("###################################################################### \n");
 	printf ("\n\n");
 	printf ("Gameplay:\n\n");
-	printf ("[I] Init Phase --> get to know the objects \n");
-	printf ("\t [Q] -Show Last Model \n");
-	printf ("\t [W] -Show Next Model \n\n");
+	printf ("[I] Init Phase --> get familiar the objects \n");
+	printf ("\t [Q] Show Last Model \n");
+	printf ("\t [W] Show Next Model \n\n");
 	printf ("[R] Load New Object --> explore the object \n\n");
 	printf ("[SPACE] Display possible solutions \n");
-	printf ("\t --> Touch the correct object  \n");
+	printf ("\t Touch one object  \n");
 	printf ("\t --> the appropriate colission box will turn blue \n\n");
-	printf ("[SPACE] Check if solution is correct \n");
-	printf ("\t --> the colission box of the correct object will turn green \n\n");
+	printf ("[SPACE] Check if your choice is correct \n");
+	printf ("\t the colission box of the correct object will turn green \n\n");
+	printf ("Go to next object with [SPACE] \n");
 	printf ("\n\n");
-	printf ("Choose the number of elements you want to guess\n");
-	printf ("[1] --> gues 3 objects \n");
-	printf ("[2] --> gues 5 objects (default) \n");
-	printf ("[3] --> gues 10 objects \n\n\n");
+	printf ("[F] Switches force shading on/off (default = on) \n");
+	printf ("[S] Switches full volume on/off (default = off) \n");
+	printf ("\n\n");
+	printf ("Choose the number of rounds you want to guess and confirm with [ENTER] \n");
+	printf ("[1] play 3 rounds \n");
+	printf ("[2] play 5 rounds (default) \n");
+	printf ("[3] play 10 rounds \n\n\n");
 	//printf ("[N] -New Game \n");
 	//printf ("[1-5] - Model 1-N \n");	
 	//printf ("[x] - Exit application\n");
@@ -324,22 +328,22 @@ int main(int argc, char* argv[]){
 
 	// create a light source and attach it to the camera
 	light = new cLight(world);
-	light2 = new cLight(world);
-	light3 = new cLight(world);
-	light4 = new cLight(world);
+	//light2 = new cLight(world);
+	//light3 = new cLight(world);
+	//light4 = new cLight(world);
 	camera->addChild(light);                   // attach light to camera
 	light->setEnabled(true);                   // enable light source
 	light->setPos(cVector3d( 2.0, 0.5, 1.0));  // position the light source
 	light->setDir(cVector3d(-2.0, 0.5, 1.0));  // define the direction of the light beam
-	light2->setEnabled(true);                   // enable light source
-	light2->setPos(cVector3d( 0.0, 2.0, 2.0));  // position the light source
-	light2->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
-	light3->setEnabled(true);                   // enable light source
-	light3->setPos(cVector3d( 0.0, -2.0, 2.0));  // position the light source
-	light3->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
-	light4->setEnabled(true);                   // enable light source
-	light4->setPos(cVector3d( 0.0, 0.0, 2.0));  // position the light source
-	light4->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
+	//light2->setEnabled(true);                   // enable light source
+	//light2->setPos(cVector3d( 0.0, 2.0, 2.0));  // position the light source
+	//light2->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
+	//light3->setEnabled(true);                   // enable light source
+	//light3->setPos(cVector3d( 0.0, -2.0, 2.0));  // position the light source
+	//light3->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
+	//light4->setEnabled(true);                   // enable light source
+	//light4->setPos(cVector3d( 0.0, 0.0, 2.0));  // position the light source
+	//light4->setDir(cVector3d(0.0, 0.0, -1.0));  // define the direction of the light beam
 
 	//light->setDirectionalLight(false);
 	//light2->setDirectionalLight(false);
@@ -456,12 +460,12 @@ int main(int argc, char* argv[]){
 	//-----------------------------------------------------------------------
 
 	//Materials
-	cMaterial mat;
+	cMaterial mat, mat_tooth, mat_rabbit;
 	mat.m_ambient.set(1, 0.5, 0.5);
-	mat.m_diffuse.set(0.5, 0.8, 0.2);
+	mat.m_diffuse.set(0.0, 0.8, 0.2);
 	mat.m_specular.set(1.0, 1.0, 1.0);
 
-	cout << "Loading objects";
+	cout << "Loading objects ";
 	// switch chooses the correct object and sets the attributes of the object
 	for(int it=0;it<NumObj;it++){
 		cMesh *DObject = new cMesh(world);
@@ -479,39 +483,46 @@ int main(int argc, char* argv[]){
 
 		case 0: // tooth
 			// load soundfiles, dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8s
-			load_object(DObject, "tooth/tooth.3ds", "Glass", 0.15, 0.2, 0.8, 0, cVector3d(0.0, 0.0, 0.0)); //  
+			load_object(DObject, "tooth/tooth.3ds", "amp_files/ceramik_amp", 0.15, 0.2, 0.8, 0, cVector3d(0.0, 0.0, 0.0)); //  
 			
 				//load_object(DObject, "Schwamm/sponge.obj", "Cashmere", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
 			//load_object(DObject, "tooth/tooth.3ds", "Glass", 0.15, 0.2, 0.8, 1, cVector3d(0.0, 0.0, 0.0)); //  
 			//DObject->m_material.setStiffness(0.8*stiffnessMax);
-			DObject->setStiffness(0.8*stiffnessMax,true);
-			DObject->setMaterial(mat,true);
 			
-			DObject->m_material.m_diffuse=cColorf(0,0,0,1);
-			DObject->getChild(0)->m_material.m_diffuse=cColorf(1,0.5,0.3,1);
-			DObject->m_material.m_diffuse=cColorf(0,0,0,1);
-			//DObject->m_material.
+			
+			mat_tooth.m_ambient.set(1, 0.5, 0.5);
+			mat_tooth.m_diffuse.set(0.5, 0.8, 0.2);
+			mat_tooth.m_specular.set(1.0, 1.0, 1.0);
+
+			mat_tooth.setDynamicFriction(0.08);
+			mat_tooth.setStaticFriction(0.1);
+			mat_tooth.setStiffness(0.8*stiffnessMax);
+
+			DObject->setMaterial(mat_tooth, true);
+
+			/*DObject->m_material.m_diffuse = cColorf(0,0,0,1);
+			DObject->getChild(0)->m_material.m_diffuse = cColorf(1,0.5,0.3,1);
+			DObject->m_material.m_diffuse = cColorf(0,0,0,1);*/
+
+			//DObject->setStiffness(0.8*stiffnessMax,true);
 			break;
 
 		case 1: // bunny
 			// load soundfiles, dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
-			load_object(DObject, "bunny/bunny.obj", "Cashmere", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
-			DObject->setMaterial(mat,true);
-			DObject->m_material.m_diffuse=cColorf(1,0.5,0.3,1);
-			DObject->getChild(0)->m_material.m_diffuse=cColorf(1,0.5,0.3,1);
+			load_object(DObject, "bunny/bunny.obj", "amp_files/carpet_amp", 0.3, 0.4, 0.2, 0, cVector3d(1.0, 0.0, 0.0));
 			break;
 
-		case 2:	// rock,	granite
+		case 2:	// rock, granite
 			// dyn_fric = 0.3, stat_fric = 0.43, stiff = 0.6
 			load_object(DObject, "Stone/Rock1.obj", "stone_tile", 0.3, 0.43, 0.6, 0, cVector3d(0.0, 0.0, 0.8));	
-				DObject->getChild(0)->m_material.m_diffuse=cColorf(1,0.5,0.3,1);		
+			DObject->getChild(0)->m_material.m_diffuse=cColorf(1,0.5,0.3,1);		
 			break;
 
 		case 3:	// sponge
 			// upper part: dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.1
-			load_object(DObject, "Schwamm/sponge.obj", "Foam_medium", 0.2, 0.25, 0.1, 0, cVector3d(0.2, 0.2, 0.8));
+			load_object(DObject, "Schwamm/sponge.obj", "amp_files/foam_medium_amp", 0.2, 0.25, 0.1, 0, cVector3d(0.2, 0.2, 0.8));
 			// power part: dyn_fric = 0.3, stat_fric = 0.4, stiff = 0.2
-			load_object(DObject, "Schwamm/sponge.obj", "Foam_medium", 0.3, 0.4, 0.2, 1, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "Schwamm/sponge.obj", "amp_files/foam_medium_amp", 0.3, 0.4, 0.2, 1, cVector3d(0.0, 0.0, 0.0));
 			break;
 
 		case 4:	// rock, sandstone	
@@ -521,7 +532,7 @@ int main(int argc, char* argv[]){
 
 		 case 5:	 // Cork
 			 // dyn_fric = 0.5, stat_fric = 0.5, stiff = ??
-			load_object(DObject, "Cork/cork.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
+			load_object(DObject, "Cork/cork.obj", "amp_files/Cork_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 1.0));
 			break;	 	
 			
 		case 6:	// paper Cup
@@ -536,30 +547,30 @@ int main(int argc, char* argv[]){
 		//*/	
 		case 7:	// ice
 			// dyn_fric = 0.02, stat_fric = 0.03, stiff = 0.8
-			load_object(DObject, "iceCube2/ice.obj", "Foil_isolating", 0.01, 0.01, 0.8, 0, cVector3d(1.0, 0.2, 0.0));
+			load_object(DObject, "iceCube2/ice.obj", "amp_files/foil_amp", 0.01, 0.01, 0.9, 0, cVector3d(1.0, 0.2, 0.0));
 			//DObject->getChild(0)->setTransparencyLevel(0.2);
 			DObject->setTransparencyLevel(0.2);
-			DObject->setUseTransparency(true,true);
+			DObject->setUseTransparency(true, true);
 	
 			break;
 		case 8:	// Teddy
 			// dyn_fric = 0.2, stat_fric = 0.25, stiff = 0.2
-			load_object(DObject, "teddy_bear/teddy.obj", "Cork", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
-			load_object(DObject, "teddy_bear/teddy.obj", "Cork", 0.5, 0.5, 0.6, 1, cVector3d(0.0, 0.0, 0.0));
-			load_object(DObject, "teddy_bear/teddy.obj", "Cork", 0.5, 0.5, 0.6, 2, cVector3d(0.0, 0.0, 0.0));
-			load_object(DObject, "teddy_bear/teddy.obj", "Cork", 0.5, 0.5, 0.6, 3, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/Cashmere_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/Cashmere_amp", 0.5, 0.5, 0.6, 1, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/Cashmere_amp", 0.5, 0.5, 0.6, 2, cVector3d(0.0, 0.0, 0.0));
+			load_object(DObject, "teddy_bear/teddy.obj", "amp_files/Cashmere_amp", 0.5, 0.5, 0.6, 3, cVector3d(0.0, 0.0, 0.0));
 			break;
 
 		case 9:	// eraser
 		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		load_object(DObject, "PinkandInk/eraser.obj", "amp_files\rubber_amp", 0.7, 0.7, 0.7, 0, cVector3d(0.2, 0.2, 0));
+		load_object(DObject, "PinkandInk/eraser.obj", "amp_files/rubber_amp", 0.7, 0.7, 0.7, 0, cVector3d(0.2, 1.0, 0));
 		//DObject->setTransparencyLevel(1);
 		break;	
 
 
 		case 10:	// (shot) glass
 		// dyn_fric = 0.15, stat_fric = 0.19, stiff = 0.8
-		load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
+		load_object(DObject, "Shot_glass/shot_glass.obj", "amp_files/Glass_amp", 0.01, 0.015, 0.9, 0, cVector3d(0.0, 0.0, 0.0));
 		//DObject->setTransparencyLevel(1);
 		break;	 
 
@@ -569,6 +580,11 @@ int main(int argc, char* argv[]){
 		//load_object(DObject, "plastic_bottle/ottle.obj", "amp_files/Glass_amp", 0.5, 0.5, 0.6, 0, cVector3d(0.0, 0.0, 0.0));
 		//DObject->setTransparencyLevel(1);
 		break;	 	
+
+		case 12: // box
+			// load soundfiles, dyn_fric = 0.2 stat_fric = 0.15, stiff = 0.8s
+			load_object(DObject, "Boxes/Box1.obj", "amp_files/beech_amp", 0.3, 0.4, 0.8, 0, cVector3d(0.0, 0.0, 0.0)); //  
+			break;
 
 		} // end of case statement
 		
@@ -593,7 +609,7 @@ int main(int argc, char* argv[]){
 		Objects.push_back(DObject);	
 
 		//TODO Ghost objects
-		cout <<DObject->getNumChildren()<< endl;
+		//cout <<DObject->getNumChildren()<< endl;
 	}
 	cout << endl;
 
@@ -695,52 +711,52 @@ void keySelect(unsigned char key, int x, int y){
 			exit(0);
 			break;
 			
-		case '0':
+		/*case '0':
 			
 			for(int l=0;l<Objects.size();l++){
 				Objects[l]->setShowEnabled(false,true);
 			}
 			Objects[0]->setShowEnabled(true,true);
-			break;
+			break;*/
 			
 		case '1':				
-			for(int l=0;l<Objects.size();l++){
+			/*for(int l=0;l<Objects.size();l++){
 				Objects[l]->setShowEnabled(false,true);
 			}
-			Objects[1]->setShowEnabled(true,true);
+			Objects[1]->setShowEnabled(true,true);*/
 			inp_nr = 3;
 			break;
 			
 		case '2':
 			
-			for(int l=0;l<Objects.size();l++){
+			/*for(int l=0;l<Objects.size();l++){
 				Objects[l]->setShowEnabled(false,true);
 			}
-			Objects[2]->setShowEnabled(true,true);
+			Objects[2]->setShowEnabled(true,true);*/
 			inp_nr = 5;
 			break;
 
 		case '3':
-			for(int l=0;l<Objects.size();l++){
+			/*for(int l=0;l<Objects.size();l++){
 				Objects[l]->setShowEnabled(false,true);
 			}
-			Objects[3]->setShowEnabled(true,true);	
+			Objects[3]->setShowEnabled(true,true);	*/
 			inp_nr = 10;
 			break;
 
-		case '4':
+		/*case '4':
 			for(int l=0;l<Objects.size();l++){
 				Objects[l]->setShowEnabled(false,true);
 			}
 			Objects[4]->setShowEnabled(true,true);
-			break;
+			break;*/
 
-		case '5':
+		/*case '5':
 			for(int l=0;l<Objects.size();l++){
 				Objects[l]->setShowEnabled(false,true);
 			}
 			Objects[5]->setShowEnabled(true,true);
-			break;
+			break;*/
 
 		/*case '6':
 			for(int l=0;l<Objects.size();l++){
@@ -756,44 +772,44 @@ void keySelect(unsigned char key, int x, int y){
 			Objects[7]->setShowEnabled(true,true);
 			break;*/
 
-		case '-':
-			//	// decrease transparency level
-			//	transparencyLevel = transparencyLevel - 0.1;
-			//	if (transparencyLevel < 0.0) { transparencyLevel = 0.0; }
+		//case '-':
+		//	//	// decrease transparency level
+		//	//	transparencyLevel = transparencyLevel - 0.1;
+		//	//	if (transparencyLevel < 0.0) { transparencyLevel = 0.0; }
 
-			//	// apply changes to DObject
-			//	((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
-			//	((cMesh*)(DObject->getChild(1)))->setUseTransparency(true);
+		//	//	// apply changes to DObject
+		//	//	((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
+		//	//	((cMesh*)(DObject->getChild(1)))->setUseTransparency(true);
 
-			//	((cMesh*)(DObject->getChild(0)))->setTransparencyLevel(transparencyLevel);
-			//	((cMesh*)(DObject->getChild(0)))->setUseTransparency(true);
+		//	//	((cMesh*)(DObject->getChild(0)))->setTransparencyLevel(transparencyLevel);
+		//	//	((cMesh*)(DObject->getChild(0)))->setUseTransparency(true);
 
-			//	// if object is almost transparent, make it invisible
-			//	if (transparencyLevel < 0.1){
-			//		//((cMesh*)(DObject->getChild(1)))->setShowEnabled(false, true);
-			//	}
-			break;
+		//	//	// if object is almost transparent, make it invisible
+		//	//	if (transparencyLevel < 0.1){
+		//	//		//((cMesh*)(DObject->getChild(1)))->setShowEnabled(false, true);
+		//	//	}
+		//	break;
 
-		case '+':
-			//	// increase transparency level
-			//	transparencyLevel = transparencyLevel + 0.1;
-			//	if (transparencyLevel > 1.0) { transparencyLevel = 1.0; }
+		//case '+':
+		//	//	// increase transparency level
+		//	//	transparencyLevel = transparencyLevel + 0.1;
+		//	//	if (transparencyLevel > 1.0) { transparencyLevel = 1.0; }
 
-			//	// apply changes to DObject
-			//	((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
+		//	//	// apply changes to DObject
+		//	//	((cMesh*)(DObject->getChild(1)))->setTransparencyLevel(transparencyLevel);
 
-			//	// make object visible
-			//	if (transparencyLevel >= 0.1)
-			//	{
-			//		((cMesh*)(DObject->getChild(1)))->setShowEnabled(true, true);
-			//	}
+		//	//	// make object visible
+		//	//	if (transparencyLevel >= 0.1)
+		//	//	{
+		//	//		((cMesh*)(DObject->getChild(1)))->setShowEnabled(true, true);
+		//	//	}
 
-			//	// disable transparency is transparency level is set to 1.0
-			//	if (transparencyLevel == 1.0)
-			//	{
-			//		((cMesh*)(DObject->getChild(1)))->setUseTransparency(false);
-			//	}
-			break;
+		//	//	// disable transparency is transparency level is set to 1.0
+		//	//	if (transparencyLevel == 1.0)
+		//	//	{
+		//	//		((cMesh*)(DObject->getChild(1)))->setUseTransparency(false);
+		//	//	}
+		//	break;
 			
 		case 32: // space bar
 			//cout<< "space bar" << current_state << endl;
@@ -802,6 +818,8 @@ void keySelect(unsigned char key, int x, int y){
 
 		case 's':
 			use_max_force=!use_max_force;
+			if (use_max_force == true) cout << "Voice coil actuator always plays on full volume." << endl;
+			else cout << "Voice coil actuator volume depends on penetration depth." << endl;
 			break;	
 
 		case 'r':
@@ -828,6 +846,13 @@ void keySelect(unsigned char key, int x, int y){
 			//cout<< "next" << current_state  <<endl;
 			if((current_state == 0) && (act_obj < (NumObj - 1))) act_obj++;
 			gameLogic();
+			break;
+
+		case 'f':
+			//cout<< "next" << current_state  <<endl;
+			ch_useForceShading = !ch_useForceShading; 
+			if (ch_useForceShading == true) cout << "Force shading is active." << endl;
+			else cout << "Force shading is NOT active." << endl;
 			break;
 
 		case 13:
@@ -917,7 +942,11 @@ void updateHaptics(void){
 		tool->updatePose();			
 		// compute interaction forces
 		//if(useFriction) 
-		((ch_generic3dofPointer*)tool)->computeInteractionForcesD();
+
+		if (ch_useForceShading == true) ((ch_generic3dofPointer*)tool)->computeInteractionForcesD();
+		else ((ch_generic3dofPointer*)tool)->computeInteractionForces(); // D
+
+		//((ch_generic3dofPointer*)tool)->computeInteractionForcesD();
 		//tool->computeInteractionForces();
 		//else tool->computeInteractionForces();
 
@@ -957,7 +986,7 @@ void updateHaptics(void){
 			}
 		}
 
-		cSleepMs(0);
+		cSleepMs(0.001);
 	}
 
 	// exit haptics thread
@@ -1236,6 +1265,11 @@ void space_bar_func(void){
 				//else Objects[multChoice[j]]->setBoxColor(cColorf(1, 0, 0, 1)); // 
 			}
 		}
+	else if (current_state == 3){
+		current_state = 1;
+		//gameLogic();
+		nr_input_el = false;
+	}
 	newButPush = true;
 	gameLogic();
 
