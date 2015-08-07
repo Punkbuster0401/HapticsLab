@@ -494,7 +494,6 @@ int main(int argc, char* argv[]){
 			mat_tooth.setStiffness(0.8 * stiffnessMax);
 
 			DObject->setMaterial(mat_tooth, true);
-
 			veloc_mul[it] = 1.0;
 			break;
 
@@ -713,7 +712,7 @@ void keySelect(unsigned char key, int x, int y){
 			
 		case 32: // space bar
 			space_bar_func();
-			if (act_t == true)	tim_d = 20;
+			if (act_t == true)	tim_d = 19;
 			break;
 
 		case 's':
@@ -723,7 +722,7 @@ void keySelect(unsigned char key, int x, int y){
 			break;	
 
 		case 'r':
-			if (act_t == true)	tim_d = 20;
+			if (act_t == true)	tim_d = 19;
 			current_state = 1;
 			gameLogic();
 			nr_input_el = false;
@@ -790,6 +789,7 @@ void keySelect(unsigned char key, int x, int y){
 			break;
 	}
 	redrawUI();
+	restart_counter = false;
 }
 
 //---------------------------------------------------------------------------
@@ -904,7 +904,9 @@ void updateHaptics(void){
 		if (sound_ctr == 100){ // only change sound every 100 iterations
 			if(ContObject != NULL){
 				if (tool->isInContact(ContObject)){		
-					LastID = GObject->getParent()->m_tag;					
+					LastID = GObject->getParent()->m_tag;
+					//cout << "LastID: " << LastID << endl;
+					//cout << "LastID: " <<  << endl;
 					if(LastID >= 0) ChangeSound(LastID);	
 				}
 			}
@@ -1171,6 +1173,8 @@ void gameLogic(void){
 					distToObj[k] = Objects[multChoice[k]]->getBoundaryMax().distance(Objects[multChoice[k]]->getBoundaryCenter());
 					//Objects[multChoice[k]]->setAsGhost(true);
 					Objects[multChoice[k]]->setHapticEnabled(false,true);
+					/////////////////////neu //////////////////////////////
+					Objects[multChoice[k]]->setShowEnabled(true, true);
 				}
 				/*Objects[7]->setTransparencyLevel(0.2);
 				Objects[9]->setTransparencyLevel(0.2);*/
@@ -1222,7 +1226,6 @@ void gameLogic(void){
 				// cout <<"Press [R] for new Game"<<endl;
 				restart_counter = true;
 				redrawUI();
-				restart_counter = false;
 			}
 			break;
 		}
